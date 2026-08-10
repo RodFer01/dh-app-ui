@@ -345,6 +345,81 @@
   .badge-blue   { background: #e6f0ff; color: var(--blue); }
   .badge-orange { background: #fff3e6; color: var(--orange); }
 
+  /* ── User Guide accordion ── */
+  .guide-intro {
+    font-size: 14px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    line-height: 1.7;
+  }
+  .accordion { display: flex; flex-direction: column; gap: 8px; }
+  .acc-item {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .acc-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 20px;
+    cursor: pointer;
+    user-select: none;
+    transition: background .15s;
+  }
+  .acc-header:hover { background: var(--light); }
+  .acc-emoji { font-size: 20px; flex-shrink: 0; }
+  .acc-title { flex: 1; }
+  .acc-title strong { font-size: 14px; font-weight: 700; display: block; }
+  .acc-title span   { font-size: 12px; color: var(--muted); }
+  .acc-chevron {
+    font-size: 12px;
+    color: var(--muted);
+    transition: transform .2s;
+    flex-shrink: 0;
+  }
+  .acc-item.open .acc-chevron { transform: rotate(180deg); }
+  .acc-body {
+    display: none;
+    padding: 0 20px 20px;
+    border-top: 1px solid var(--border);
+  }
+  .acc-item.open .acc-body { display: block; }
+  .acc-body h4 {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: var(--muted);
+    margin: 16px 0 8px;
+  }
+  .acc-body p  { font-size: 13px; color: var(--text); line-height: 1.7; }
+  .acc-body ul { margin: 0; padding-left: 18px; }
+  .acc-body li { font-size: 13px; color: var(--text); line-height: 1.8; }
+  .acc-body li strong { color: var(--blue); }
+  .acc-tip {
+    background: #f0f5ff;
+    border-left: 3px solid var(--blue2);
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--text);
+    margin-top: 12px;
+  }
+  .acc-tip strong { color: var(--blue); }
+  .role-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 10px;
+    padding: 2px 8px;
+    margin-right: 4px;
+  }
+  .role-all    { background: #e6f0ff; color: #003d82; }
+  .role-admin  { background: #fce8ff; color: #5b008e; }
+  .role-sa     { background: #e6f7ee; color: #0d7a4e; }
+
   /* ── Warning ── */
   .warning {
     background: #fff8e6;
@@ -399,6 +474,7 @@
     <li><a href="#setup">Local Setup</a></li>
     <li><a href="#workflow">Workflow</a></li>
     <li><a href="#deploy">Deploy</a></li>
+    <li><a href="#userguide">User Guide</a></li>
     <li><a href="#contact">Contact</a></li>
   </ul>
 </nav>
@@ -667,6 +743,196 @@ python3 -m venv .venv &amp;&amp; source .venv/bin/activate
     </div>
   </section>
 
+  <!-- ── USER GUIDE ── -->
+  <section id="userguide">
+    <h2><span class="icon">📖</span> User Guide</h2>
+    <p class="guide-intro">
+      The DH SA Main App is accessible at the BTP URL shared by the project owner. Login requires an <strong>@sap.com</strong> account via Azure SSO — no separate password needed. Click each module below to expand its guide.
+    </p>
+    <div class="accordion">
+
+      <!-- LOGIN -->
+      <div class="acc-item open">
+        <div class="acc-header" onclick="toggleAcc(this)">
+          <span class="acc-emoji">🔐</span>
+          <div class="acc-title">
+            <strong>Login &amp; Access</strong>
+            <span>Azure SSO · first-time access</span>
+          </div>
+          <span class="acc-chevron">▼</span>
+        </div>
+        <div class="acc-body">
+          <h4>How to log in</h4>
+          <ul>
+            <li>Open the app URL in your browser.</li>
+            <li>Click <strong>Sign in with Microsoft</strong>.</li>
+            <li>Authenticate with your <strong>@sap.com</strong> account.</li>
+            <li>On first login your account is created automatically — you will see a limited view until an admin grants your role.</li>
+          </ul>
+          <h4>Roles</h4>
+          <ul>
+            <li><strong>SA (Solution Advisor):</strong> access to Pipeline, AE Territory, Melody, and Outreach modules.</li>
+            <li><strong>Admin:</strong> all SA access + ETL upload, user management, and permissions panel.</li>
+          </ul>
+          <div class="acc-tip"><strong>First time?</strong> Contact Rodrigo on Teams to have your role assigned before your first session.</div>
+        </div>
+      </div>
+
+      <!-- PIPELINE -->
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)">
+          <span class="acc-emoji">📊</span>
+          <div class="acc-title">
+            <strong>Pipeline Dashboard</strong>
+            <span>Weekly snapshots · YoY analysis · opportunity list</span>
+          </div>
+          <span class="acc-chevron">▼</span>
+        </div>
+        <div class="acc-body">
+          <h4>Overview</h4>
+          <p>Shows the current pipeline snapshot with week-over-week and year-over-year comparison. Data is loaded from the most recent CSV ingested via ETL.</p>
+          <h4>Key features</h4>
+          <ul>
+            <li><strong>Filters:</strong> filter by region, sub-region, AE, solution family, or stage.</li>
+            <li><strong>YoY chart:</strong> compares current pipeline ACV vs. the same week in the prior year.</li>
+            <li><strong>Opportunity table:</strong> sortable list with account, AE, solution, stage, ACV, and close date.</li>
+            <li><strong>Export:</strong> download the filtered view as Excel via the Export button.</li>
+          </ul>
+          <div class="acc-tip"><strong>Tip:</strong> Use the "Week" selector to navigate historical snapshots — useful for trend analysis in QBR prep.</div>
+        </div>
+      </div>
+
+      <!-- AE TERRITORY -->
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)">
+          <span class="acc-emoji">🗺️</span>
+          <div class="acc-title">
+            <strong>AE Territory Analysis</strong>
+            <span>Per-AE pipeline · outreach contacts · account solution map</span>
+          </div>
+          <span class="acc-chevron">▼</span>
+        </div>
+        <div class="acc-body">
+          <h4>Overview</h4>
+          <p>Provides a territory-level view grouped by AE. For each AE you see their active opportunities, assigned contacts, and solution coverage gaps.</p>
+          <h4>Key features</h4>
+          <ul>
+            <li><strong>Territory map:</strong> AE list with total ACV, number of accounts, and pipeline health indicator.</li>
+            <li><strong>Opportunity drill-down:</strong> click any AE to expand their opportunity list with full details.</li>
+            <li><strong>Outreach contacts:</strong> for each opportunity, open the Contacts drawer to see assigned contacts, add new ones, and track outreach status.</li>
+            <li><strong>Suggestions:</strong> the app suggests contacts based on account and solution, pre-populated from SAP's account data.</li>
+            <li><strong>Account Solution Map:</strong> shows which SAP solutions are already in pipeline for an account and highlights coverage gaps with pre-suggested competitors per solution.</li>
+          </ul>
+          <div class="acc-tip"><strong>Tip:</strong> Use the Account Solution Map before an EBC or customer call to identify white-space and prepare competitor talking points.</div>
+        </div>
+      </div>
+
+      <!-- MELODY -->
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)">
+          <span class="acc-emoji">🎵</span>
+          <div class="acc-title">
+            <strong>Melody Activity Tracking</strong>
+            <span>Presales activities · team targets · coverage</span>
+          </div>
+          <span class="acc-chevron">▼</span>
+        </div>
+        <div class="acc-body">
+          <h4>Overview</h4>
+          <p>Displays presales activities logged in Melody/Databricks, aligned to team targets. Helps managers track SA engagement across accounts and solutions.</p>
+          <h4>Key features</h4>
+          <ul>
+            <li><strong>Activity list:</strong> filter by SA, solution family, account, or date range.</li>
+            <li><strong>Target progress:</strong> shows activities completed vs. target for each SA in the period.</li>
+            <li><strong>Solution breakdown:</strong> how activities are distributed across solution families.</li>
+          </ul>
+          <div class="acc-tip"><strong>Tip:</strong> Data is loaded via the ETL module — if figures look stale, ask the admin to re-ingest the latest Melody export.</div>
+        </div>
+      </div>
+
+      <!-- ETL -->
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)">
+          <span class="acc-emoji">📤</span>
+          <div class="acc-title">
+            <strong>ETL — Data Ingestion</strong>
+            <span><span class="role-tag role-admin">Admin only</span> Upload pipeline, VAT, Melody, targets</span>
+          </div>
+          <span class="acc-chevron">▼</span>
+        </div>
+        <div class="acc-body">
+          <h4>Overview</h4>
+          <p>Allows admins to upload CSV/Excel files that populate the app's database. This is how new data reaches all other modules.</p>
+          <h4>Supported file types</h4>
+          <ul>
+            <li><strong>Pipeline CSV:</strong> weekly opportunity snapshot from SAP CRM/Sales Cloud export.</li>
+            <li><strong>VAT CSV:</strong> value at target data for the period.</li>
+            <li><strong>Melody CSV:</strong> presales activity export from Melody/Databricks.</li>
+            <li><strong>Targets CSV:</strong> SA and team targets for the current period.</li>
+          </ul>
+          <h4>How to upload</h4>
+          <ul>
+            <li>Go to the <strong>ETL</strong> module in the top nav.</li>
+            <li>Select the file type from the dropdown.</li>
+            <li>Drag and drop the file or click to browse.</li>
+            <li>Click <strong>Process</strong> — the app validates and loads the data into HANA.</li>
+            <li>A success/error summary is shown after processing.</li>
+          </ul>
+          <div class="acc-tip"><strong>Important:</strong> Always upload files in the expected format. If columns are renamed or missing, the ingestion will fail with a validation error.</div>
+        </div>
+      </div>
+
+      <!-- DEAL QUALIFICATION -->
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)">
+          <span class="acc-emoji">🤝</span>
+          <div class="acc-title">
+            <strong>Deal Qualification</strong>
+            <span>Structured sessions · MEDDIC · complex opportunities</span>
+          </div>
+          <span class="acc-chevron">▼</span>
+        </div>
+        <div class="acc-body">
+          <h4>Overview</h4>
+          <p>Provides a structured framework for qualifying complex deals. Used in alignment sessions between SA, AE, and management.</p>
+          <h4>Key features</h4>
+          <ul>
+            <li><strong>Session creation:</strong> create a qualification session tied to a specific opportunity.</li>
+            <li><strong>Qualification dimensions:</strong> covers economic buyer, decision criteria, decision process, identified pain, champion, and competition.</li>
+            <li><strong>Notes &amp; scoring:</strong> add free-text notes per dimension and track a qualification score over time.</li>
+            <li><strong>History:</strong> view previous sessions for the same account to track evolution.</li>
+          </ul>
+          <div class="acc-tip"><strong>Tip:</strong> Run a qualification session before deal reviews or before requesting executive sponsorship to ensure alignment on deal health.</div>
+        </div>
+      </div>
+
+      <!-- ADMIN -->
+      <div class="acc-item">
+        <div class="acc-header" onclick="toggleAcc(this)">
+          <span class="acc-emoji">⚙️</span>
+          <div class="acc-title">
+            <strong>Admin Panel</strong>
+            <span><span class="role-tag role-admin">Admin only</span> Users · roles · permissions</span>
+          </div>
+          <span class="acc-chevron">▼</span>
+        </div>
+        <div class="acc-body">
+          <h4>Overview</h4>
+          <p>User and permission management for the application. Only accessible to users with the Admin role.</p>
+          <h4>Key features</h4>
+          <ul>
+            <li><strong>User list:</strong> see all registered users, their role, and last login date.</li>
+            <li><strong>Role assignment:</strong> promote a user to Admin or restrict to SA — takes effect on their next page load.</li>
+            <li><strong>Module permissions:</strong> enable or disable specific modules per user if finer-grained control is needed.</li>
+            <li><strong>Deactivate user:</strong> removes access without deleting the account history.</li>
+          </ul>
+          <div class="acc-tip"><strong>Security note:</strong> Admin access should be limited to the project owner and designated ops contacts. Do not share admin credentials.</div>
+        </div>
+      </div>
+
+    </div><!-- /accordion -->
+  </section>
+
   <!-- ── CONTACT ── -->
   <section id="contact">
     <h2><span class="icon">👤</span> Project Owner</h2>
@@ -692,5 +958,11 @@ python3 -m venv .venv &amp;&amp; source .venv/bin/activate
   DH SA Main App · SAP LAC Digital Hub · Internal use only · 2026
 </footer>
 
+<script>
+function toggleAcc(header) {
+  const item = header.parentElement;
+  item.classList.toggle('open');
+}
+</script>
 </body>
 </html>

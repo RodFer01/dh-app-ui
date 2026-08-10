@@ -1,0 +1,72 @@
+/* Geist Sans — modern, clean, used by Vercel/Linear */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Geist', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    @apply bg-sap-bg text-sap-text antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  * { box-sizing: border-box; }
+  h1, h2, h3, h4, h5, h6 { font-family: 'Geist', 'Inter', sans-serif; font-weight: 600; }
+}
+
+@layer components {
+  .card {
+    @apply bg-white border border-sap-border rounded-xl shadow-card;
+  }
+  .section-label {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-sap-muted my-3;
+    letter-spacing: 0.07em;
+  }
+  .kpi-label {
+    @apply text-[10px] font-medium uppercase tracking-[0.06em] text-sap-subtle mb-1;
+  }
+  .kpi-value {
+    @apply text-[1.25rem] font-semibold leading-tight text-sap-blue whitespace-nowrap;
+  }
+}
+
+/* AG Grid — white background, dark text, modern typography */
+.ag-theme-alpine {
+  --ag-background-color: #ffffff;
+  --ag-header-background-color: #f8f9fa;
+  --ag-odd-row-background-color: #ffffff;
+  --ag-even-row-background-color: #ffffff;
+  --ag-row-hover-color: #f0f4ff;
+  --ag-selected-row-background-color: #e8f0fe;
+  --ag-border-color: #e1e2e6;
+  --ag-header-foreground-color: #32363a;
+  --ag-foreground-color: #32363a;
+  --ag-font-family: 'Geist', 'Inter', sans-serif;
+  --ag-font-size: 13px;
+  --ag-header-height: 40px;
+  --ag-row-height: 38px;
+  --ag-cell-horizontal-padding: 14px;
+  --ag-header-column-separator-display: block;
+  --ag-header-column-separator-color: #e1e2e6;
+}
+.ag-theme-alpine .ag-header-cell-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #556b82;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.ag-theme-alpine .ag-cell {
+  color: #32363a;
+  font-size: 13px;
+}
+.ag-theme-alpine .ag-row-selected .ag-cell {
+  background-color: #e8f0fe;
+}
+.ag-theme-alpine .ag-paging-panel {
+  font-size: 12px;
+  color: #556b82;
+}

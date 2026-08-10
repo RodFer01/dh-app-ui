@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Extraindo token…</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f5f6f7; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; color: #32363A; text-align: center; }
+  p { font-size: .9rem; color: #556b82; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid #0070f2; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 1rem; }
+</style>
+</head>
+<body>
+<div>
+  <div class="spinner"></div>
+  <p id="msg">Extraindo token do Outlook…</p>
+</div>
+<script>
+(function () {
+  var found = [];
+  var now = Date.now() / 1000;
+
+  // Read from current page localStorage (this page loaded inside the Outlook session
+  // after navigation — so localStorage here is from outlook.cloud.microsoft)
+  // Actually this page is on OUR domain, so localStorage is ours.
+  // We need to read from the PREVIOUS page (Outlook).
+  // Since we can't cross-origin read, we rely on the fact that
+  // outlook.cloud.microsoft stores MSAL tokens in sessionStorage too,
+  // or we need referrer-based approach.
+  //
+  // Real approach: this page is opened by the relay, which navigated
+  // the Outlook window here. But we're on a different origin than Outlook,
+  // so localStorage is OUR origin's, not Outlook's.
+  //
+  // Correct solution: use the bookmarklet approach embedded in the relay.
+  // The relay page itself runs on our domain and can postMessage to opener.
+  // The Outlook window is separate — we can only communicate via postMessage.
+  //
+  // Since we cannot directly read Outlook's localStorage from our domain,
+  // the correct approach is: user runs a bookmarklet on the Outlook page.
+  // We pre-generate that bookmarklet and show it to the user.
+
+  document.getElementById('msg').textContent =
+    'Esta página deve ser aberta no contexto do Outlook. Se você viu esta mensagem, algo correu mal.';
+
+  // Try anyway — maybe this was navigated to within an Outlook iframe context
+  for (var k in localStorage) {
+    try {
+      var v = JSON.parse(localStorage.getItem(k));
+      if (v && typeof v.secret === 'string' && v.secret.length > 200) {
+        var exp = parseFloat(v.expiresOn || v.extended_expires_on || 0);
+        if (exp > now + 60) found.push({ s: v.secret, e: exp });
+      }
+    } catch (x) {}
+  }
+
+  if (found.length > 0) {
+    found.sort(function (a, b) { return b.e - a.e; });
+    var best = found[0];
+    // Send to relay window (our opener)
+    if (window.opener) {
+      window.opener.postMessage({ type: 'OUTLOOK_TOKEN', token: best.s, expiresOn: best.e }, '*');
+    }
+    document.getElementById('msg').textContent = '✓ Token obtido! Pode fechar esta janela.';
+  } else {
+    if (window.opener) {
+      window.opener.postMessage({ type: 'OUTLOOK_TOKEN_ERROR', msg: 'Nenhum token encontrado no contexto atual.' }, '*');
+    }
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Conectar ao DH App</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f5f6f7; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+  .box { background: #fff; border-radius: 12px; padding: 2rem; max-width: 440px; width: 90%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,.1); }
+  h2 { font-size: 1.05rem; color: #32363A; margin-bottom: .5rem; }
+  p { font-size: .8125rem; color: #556b82; line-height: 1.55; margin-bottom: 1.25rem; }
+  .bm-btn { display: inline-block; padding: .625rem 1.25rem; background: #0070f2; color: #fff; border-radius: .5rem; font-size: .875rem; font-weight: 700; text-decoration: none; cursor: grab; user-select: none; box-shadow: 0 2px 8px rgba(0,112,242,.3); }
+  .step { display: flex; gap: .625rem; margin: .625rem 0; align-items: flex-start; text-align: left; font-size: .8125rem; color: #32363A; }
+  .n { width: 20px; height: 20px; background: #0070f2; color: #fff; border-radius: 50%; font-size: .625rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: .1rem; }
+  .hint { font-size: .75rem; color: #556b82; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e1e2e6; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #0070f2; border-top-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; vertical-align: middle; margin-right: 6px; }
+  #status { font-size: .8125rem; margin-top: 1rem; min-height: 1.2rem; }
+  .ok { color: #256f3a; font-weight: 700; }
+  .err { color: #bb0000; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div style="font-size:2rem;margin-bottom:.75rem">🔑</div>
+  <h2>Conectar conta Microsoft</h2>
+  <p>Uma nova aba com o <strong>Outlook</strong> foi aberta.<br>
+  Siga os passos abaixo para conectar.</p>
+
+  <a id="bm" class="bm-btn" href="#" onclick="alert('Arraste para a barra de favoritos — não clique aqui.');return false;">
+    🔑 Conectar ao DH App
+  </a>
+
+  <div style="margin-top:1.5rem;text-align:left;">
+    <div class="step"><div class="n">1</div><span>Ative a barra de favoritos: <strong>Cmd+Shift+B</strong>.</span></div>
+    <div class="step"><div class="n">2</div><span>Arraste o botão azul acima para a barra de favoritos.</span></div>
+    <div class="step"><div class="n">3</div><span><strong>Vá para a aba do Outlook</strong> que abriu e clique no favorito <strong>"Conectar ao DH App"</strong>.</span></div>
+    <div class="step"><div class="n">4</div><span>Volte aqui — o DH App vai se conectar automaticamente.</span></div>
+  </div>
+
+  <div id="status"></div>
+  <div class="hint">Válido por ~1 hora. O app avisa quando o token estiver próximo de expirar.</div>
+</div>
+
+<script>
+// A RELAY_URL precisa ser http://sapdh.local/outlook-relay.html
+// para que quando o bookmarklet abre a janela com o hash,
+// ela seja da mesma origem do app e possa fazer o POST na API.
+var RELAY_URL = 'http://sapdh.local/outlook-relay.html';
+var API_URL   = 'http://127.0.0.1:8000';
+
+// Bookmarklet executado na página do Outlook (outlook.office.com).
+// NÃO pode fazer fetch para sapapi.local (CORS + mixed content bloqueados).
+// Solução: abre janela no nosso domínio passando o token no hash.
+// Essa janela (outlook-relay.html) recebe o hash e faz o POST para sapapi.local.
+var BM_CODE = '(function(){' +
+  'var found=[];var now=Date.now()/1000;' +
+  'for(var k in localStorage){' +
+    'try{' +
+      'var v=JSON.parse(localStorage.getItem(k));' +
+      'if(v&&typeof v.secret==="string"&&v.secret.length>200){' +
+        'var exp=parseFloat(v.expiresOn||v.extended_expires_on||0);' +
+        'var target=(v.target||k||"").toLowerCase();' +
+        'if(exp>now+60)found.push({s:v.secret,e:exp,t:target});' +
+      '}' +
+    '}catch(x){}' +
+  '}' +
+  'if(!found.length){alert("Nenhum token encontrado.\\nCertifique-se de estar em outlook.office.com/mail logado com sua conta SAP.");return;}' +
+  'var mail=found.filter(function(x){return x.t.indexOf("mail")>=0||x.t.indexOf("message")>=0;});' +
+  'var best=(mail.length?mail:found).sort(function(a,b){return b.e-a.e;})[0];' +
+  'var url="' + RELAY_URL + '#t="+encodeURIComponent(best.s)+"&e="+Math.floor(best.e);' +
+  'var w=window.open(url,"dh_relay","width=460,height=320,left=200,top=150");' +
+  'if(!w)window.location.href=url;' +
+  'else alert("✓ Conectando ao DH App… pode fechar esta mensagem.");' +
+'})()';
+
+document.getElementById('bm').href = 'javascript:' + encodeURIComponent(BM_CODE);
+
+// ── Recebe o token via hash (quando esta página é aberta pelo bookmarklet) ──
+function parseHash() {
+  var h = location.hash.slice(1);
+  if (!h) return null;
+  var parts = {};
+  h.split('&').forEach(function(p) {
+    var i = p.indexOf('=');
+    if (i > 0) parts[p.slice(0, i)] = decodeURIComponent(p.slice(i + 1));
+  });
+  return (parts.t && parts.e) ? parts : null;
+}
+
+var params = parseHash();
+if (params) {
+  var statusEl = document.getElementById('status');
+  statusEl.innerHTML = '<span class="spinner"></span> Salvando token…';
+  var expiresOn = parseInt(params.e);
+
+  // Salva em localStorage (mesma origem — funciona)
+  localStorage.setItem('dh_outlook_token', params.t);
+  localStorage.setItem('dh_outlook_token_expiry', String(expiresOn));
+
+  // POST na API — estamos em sapdh.local, sapapi.local é mesma rede local, sem CORS issue
+  fetch(API_URL + '/api/outlook/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: params.t, expires_on: expiresOn })
+  }).then(function() {
+    // Notifica a janela pai (o app React) via postMessage
+    if (window.opener) {
+      window.opener.postMessage({ type: 'OUTLOOK_TOKEN', token: params.t, expiresOn: expiresOn }, '*');
+    }
+    var mins = Math.round((expiresOn - Date.now() / 1000) / 60);
+    statusEl.innerHTML = '<span class="ok">✓ Conectado! Válido por ~' + mins + ' minutos.</span>';
+    history.replaceState(null, '', location.pathname);
+    setTimeout(function() { window.close(); }, 1500);
+  }).catch(function(err) {
+    // API não respondeu — postMessage como fallback
+    if (window.opener) {
+      window.opener.postMessage({ type: 'OUTLOOK_TOKEN', token: params.t, expiresOn: expiresOn }, '*');
+      statusEl.innerHTML = '<span class="ok">✓ Token enviado ao app.</span>';
+      setTimeout(function() { window.close(); }, 1500);
+    } else {
+      statusEl.innerHTML = '<span class="err">Erro ao conectar à API: ' + err + '</span>';
+    }
+  });
+}
+</script>
+</body>
+</html>

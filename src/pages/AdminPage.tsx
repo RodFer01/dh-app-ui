@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext'
 const ALL_MODULES = [
   'pipeline','melody','erp_team','lobs_team','melody_requests',
   'etl','scheduler','yoy','qualification','lac_results','opportunities',
-  'ae_analysis','feedback','actions','team_agenda','idea_zone','admin',
+  'ae_analysis','feedback','actions','team_agenda','idea_zone','campaigns','bookings','admin',
 ]
 const MODULE_LABELS: Record<string, string> = {
   pipeline: 'ADRM Pipeline', melody: 'Melody Analysis', erp_team: 'ERP Team',
@@ -15,7 +15,8 @@ const MODULE_LABELS: Record<string, string> = {
   scheduler: 'Pipeline Scheduler', yoy: '2025 vs 2026', qualification: 'Deal Qualification',
   lac_results: 'LAC Results', opportunities: 'Opportunity List',
   feedback: '1:1 Feedback', actions: 'Actions', team_agenda: 'Team Agenda',
-  idea_zone: 'IdeaZone', ae_analysis: 'AE Territory Analysis', admin: 'Administration',
+  idea_zone: 'IdeaZone', ae_analysis: 'AE Territory Analysis', campaigns: 'Campanhas',
+  bookings: 'Bookings', admin: 'Administration',
 }
 const ROLE_COLORS = {
   admin:   { bg: '#fce8e8', color: '#BB0000', label: 'Admin' },
@@ -53,6 +54,7 @@ export function AdminPage() {
   const qc = useQueryClient()
   const [tab, setTab] = useState<'users' | 'logs'>('users')
   const [showCreate, setShowCreate] = useState(false)
+  const [showBulkCreate, setShowBulkCreate] = useState(false)
   const [editUser, setEditUser] = useState<any | null>(null)
   const [logEmail, setLogEmail] = useState('')
   const [logAction, setLogAction] = useState('')
@@ -109,7 +111,11 @@ export function AdminPage() {
       {/* ── USERS TAB ── */}
       {tab === 'users' && (
         <div>
-          <div className="flex justify-end mb-3">
+          <div className="flex justify-end gap-2 mb-3">
+            <button onClick={() => setShowBulkCreate(true)}
+              className="border border-sap-blue text-sap-blue text-sm font-semibold px-4 py-2 rounded-lg hover:bg-sap-blue-l transition">
+              + Bulk Add
+            </button>
             <button onClick={() => setShowCreate(true)}
               className="bg-sap-blue hover:bg-sap-blue-d text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
               + Add User
@@ -222,6 +228,14 @@ export function AdminPage() {
         </div>
       )}
 
+      {/* ── BULK CREATE MODAL ── */}
+      {showBulkCreate && (
+        <BulkAddModal
+          onClose={() => setShowBulkCreate(false)}
+          onDone={() => { qc.invalidateQueries({ queryKey: ['admin-users'] }); setShowBulkCreate(false) }}
+        />
+      )}
+
       {/* ── CREATE USER MODAL ── */}
       {showCreate && (
         <UserModal
@@ -267,6 +281,8 @@ function UserModal({ title, initialData, onClose, onSave }: {
   const [profile, setProfile] = useState('')
   const [isActive, setIsActive] = useState(initialData?.is_active ?? true)
   const [modules, setModules] = useState<string[]>(initialData?.modules || [])
+  const [sendEmail, setSendEmail] = useState(!initialData)
+  const [ccEmail, setCcEmail] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -301,6 +317,8 @@ function UserModal({ title, initialData, onClose, onSave }: {
       if (!isEdit) payload.email = email.trim()
       if (!isEdit || password) payload.password = password || undefined
       if (isEdit) payload.is_active = isActive
+      if (!isEdit) payload.send_email = sendEmail
+      if (!isEdit && sendEmail) payload.cc_email = ccEmail.trim()
       await onSave(payload)
     } catch (e: any) {
       setError(e?.response?.data?.detail || e?.message || 'Error')
@@ -370,6 +388,23 @@ function UserModal({ title, initialData, onClose, onSave }: {
             </label>
           )}
 
+          {!isEdit && (
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={sendEmail} onChange={e => setSendEmail(e.target.checked)} className="accent-sap-blue" />
+                <span>Enviar email de boas-vindas com credenciais de acesso</span>
+              </label>
+              {sendEmail && (
+                <div>
+                  <label className="block text-xs font-semibold text-sap-muted mb-1">CC (opcional)</label>
+                  <input value={ccEmail} onChange={e => setCcEmail(e.target.value)}
+                    placeholder="email@sap.com"
+                    className="w-full border border-sap-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sap-blue" />
+                </div>
+              )}
+            </div>
+          )}
+
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold text-sap-muted uppercase tracking-wide">Module Access</label>
@@ -396,6 +431,196 @@ function UserModal({ title, initialData, onClose, onSave }: {
             className="px-5 py-2 text-sm font-semibold bg-sap-blue text-white rounded-lg hover:bg-sap-blue-d disabled:opacity-60 transition">
             {saving ? 'Saving…' : (isEdit ? 'Save Changes' : 'Create User')}
           </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Bulk add modal ─────────────────────────────────────────────────────────────
+type BulkRow = { id: number; name: string; email: string }
+
+function BulkAddModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const [profile, setProfile] = useState('')
+  const [role, setRole] = useState('viewer')
+  const [modules, setModules] = useState<string[]>([])
+  const [sendEmail, setSendEmail] = useState(true)
+  const [ccEmail, setCcEmail] = useState('')
+  const [rows, setRows] = useState<BulkRow[]>([{ id: 1, name: '', email: '' }])
+  const [saving, setSaving] = useState(false)
+  const [results, setResults] = useState<{ created: any[]; failed: any[] } | null>(null)
+  const [error, setError] = useState('')
+  let nextId = rows.length + 1
+
+  function applyProfile(key: string) {
+    setProfile(key)
+    if (!key) return
+    const p = ROLE_PROFILES[key]
+    if (!p) return
+    setRole(p.role)
+    setModules([...p.modules])
+  }
+
+  function addRow() {
+    setRows(r => [...r, { id: nextId++, name: '', email: '' }])
+  }
+
+  function removeRow(id: number) {
+    setRows(r => r.filter(x => x.id !== id))
+  }
+
+  function updateRow(id: number, field: 'name' | 'email', val: string) {
+    setRows(r => r.map(x => x.id === id ? { ...x, [field]: val } : x))
+  }
+
+  async function handleSubmit() {
+    const users = rows.filter(r => r.name.trim() && r.email.trim())
+    if (users.length === 0) { setError('Adicione ao menos um usuário com nome e email.'); return }
+    if (!profile) { setError('Selecione um perfil de acesso.'); return }
+    setError('')
+    setSaving(true)
+    try {
+      const res = await api.post('/api/admin/users/bulk', {
+        users: users.map(r => ({ name: r.name.trim(), email: r.email.trim() })),
+        profile,
+        role,
+        modules,
+        send_email: sendEmail,
+        cc_email: sendEmail ? ccEmail.trim() : '',
+      })
+      setResults(res.data)
+    } catch (e: any) {
+      setError(e?.response?.data?.detail || e?.message || 'Erro ao criar usuários')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-xl shadow-2xl w-[640px] max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-sap-border">
+          <h3 className="font-bold text-sap-text">Bulk Add Users</h3>
+          <button onClick={onClose} className="text-sap-muted hover:text-sap-text text-xl leading-none">×</button>
+        </div>
+
+        {!results ? (
+          <div className="p-5 space-y-4">
+            {/* Profile */}
+            <div>
+              <label className="block text-xs font-semibold text-sap-muted uppercase tracking-wide mb-1">Perfil de Acesso *</label>
+              <select value={profile} onChange={e => applyProfile(e.target.value)}
+                className="w-full border border-sap-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sap-blue">
+                <option value="">— Selecione um perfil —</option>
+                {Object.entries(ROLE_PROFILES).map(([key, p]) => (
+                  <option key={key} value={key}>{p.label} — {p.description}</option>
+                ))}
+              </select>
+              {profile && (
+                <p className="text-[11px] text-sap-blue mt-1">
+                  <b>{ROLE_PROFILES[profile]?.label}</b>: role <b>{role}</b> · {modules.length} módulos
+                </p>
+              )}
+            </div>
+
+            {/* User rows */}
+            <div>
+              <label className="block text-xs font-semibold text-sap-muted uppercase tracking-wide mb-2">Usuários</label>
+              <div className="space-y-2">
+                {rows.map((row, i) => (
+                  <div key={row.id} className="flex gap-2 items-center">
+                    <span className="text-[11px] text-sap-subtle w-5 text-right">{i + 1}</span>
+                    <input
+                      value={row.name}
+                      onChange={e => updateRow(row.id, 'name', e.target.value)}
+                      placeholder="Nome"
+                      className="flex-1 border border-sap-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sap-blue"
+                    />
+                    <input
+                      value={row.email}
+                      onChange={e => updateRow(row.id, 'email', e.target.value)}
+                      placeholder="Email"
+                      className="flex-1 border border-sap-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sap-blue"
+                    />
+                    {rows.length > 1 && (
+                      <button onClick={() => removeRow(row.id)} className="text-sap-error text-lg leading-none hover:opacity-70">×</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button onClick={addRow} className="mt-2 text-[12px] text-sap-blue hover:underline font-semibold">
+                + Adicionar linha
+              </button>
+            </div>
+
+            {/* Send email */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="checkbox" checked={sendEmail} onChange={e => setSendEmail(e.target.checked)} className="accent-sap-blue" />
+                <span>Enviar email de boas-vindas com credenciais de acesso</span>
+              </label>
+              {sendEmail && (
+                <div>
+                  <label className="block text-xs font-semibold text-sap-muted mb-1">CC (opcional)</label>
+                  <input value={ccEmail} onChange={e => setCcEmail(e.target.value)}
+                    placeholder="email@sap.com"
+                    className="w-full border border-sap-border rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-sap-blue" />
+                </div>
+              )}
+            </div>
+
+            {error && <p className="text-xs text-sap-error bg-red-50 border border-red-200 rounded px-3 py-2">{error}</p>}
+          </div>
+        ) : (
+          /* Results view */
+          <div className="p-5 space-y-4">
+            <div className="flex gap-4 text-sm">
+              <span className="text-sap-success font-semibold">✓ {results.created.length} criado(s)</span>
+              {results.failed.length > 0 && (
+                <span className="text-sap-error font-semibold">✗ {results.failed.length} falhou</span>
+              )}
+            </div>
+            {results.created.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-sap-muted uppercase tracking-wide mb-1">Criados</p>
+                <div className="space-y-1">
+                  {results.created.map((u: any) => (
+                    <div key={u.email} className="text-[12px] text-sap-text bg-green-50 border border-green-200 rounded px-3 py-1.5">
+                      {u.name} — <span className="text-sap-muted">{u.email}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {results.failed.length > 0 && (
+              <div>
+                <p className="text-xs font-semibold text-sap-muted uppercase tracking-wide mb-1">Falhas</p>
+                <div className="space-y-1">
+                  {results.failed.map((f: any) => (
+                    <div key={f.email} className="text-[12px] text-sap-error bg-red-50 border border-red-200 rounded px-3 py-1.5">
+                      {f.email} — {f.reason}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 px-5 py-4 border-t border-sap-border">
+          {!results ? (
+            <>
+              <button onClick={onClose} className="px-4 py-2 text-sm border border-sap-border rounded-lg hover:bg-sap-bg transition">Cancelar</button>
+              <button onClick={handleSubmit} disabled={saving}
+                className="px-5 py-2 text-sm font-semibold bg-sap-blue text-white rounded-lg hover:bg-sap-blue-d disabled:opacity-60 transition">
+                {saving ? 'Criando…' : `Criar ${rows.filter(r => r.name && r.email).length || ''} usuário(s)`}
+              </button>
+            </>
+          ) : (
+            <button onClick={onDone} className="px-5 py-2 text-sm font-semibold bg-sap-blue text-white rounded-lg hover:bg-sap-blue-d transition">
+              Concluir
+            </button>
+          )}
         </div>
       </div>
     </div>

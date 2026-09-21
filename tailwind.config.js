@@ -31,6 +31,15 @@ export default {
         xl: '0.75rem',
         '2xl': '1rem',
       },
+      keyframes: {
+        'slide-in': {
+          '0%':   { opacity: '0', transform: 'translateX(40px)' },
+          '100%': { opacity: '1', transform: 'translateX(0)' },
+        },
+      },
+      animation: {
+        'slide-in': 'slide-in 0.25s ease-out',
+      },
     },
   },
   plugins: [],

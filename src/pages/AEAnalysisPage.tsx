@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { SectionLabel } from '../components/SectionLabel'
 import { IndustryPropensityTab } from './_IndustryPropensityTab'
+import { AudienceTab } from './_AudienceTab'
 import { useAuth } from '../context/AuthContext'
 import { formatAcvK } from '../lib/utils'
 import { Download, ChevronDown, ChevronRight, Plus, X } from 'lucide-react'
@@ -201,7 +202,8 @@ function AddSuggestion({ industry, current, onAdd, onRemove, extras }) {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export function AEAnalysisPage() {
-  const { currency, fxRate } = useAuth()
+  const { currency, fxRate, user } = useAuth()
+  const canExport = ['admin', 'manager'].includes(user?.role)
 
   const [selAEs,     setSelAEs]     = useState([])
   const [selFLSMs,   setSelFLSMs]   = useState([])
@@ -210,6 +212,20 @@ export function AEAnalysisPage() {
   const [selQtrs,    setSelQtrs]    = useState([])
   const [selISS,     setSelISS]     = useState([])
   const [selDRM,     setSelDRM]     = useState([])
+  const [selPriorities, setSelPriorities] = useState<string[]>([])
+  const [probMin,    setProbMin]    = useState('')
+  const [probMax,    setProbMax]    = useState('')
+  const [selIAEs,    setSelIAEs]    = useState<string[]>([])
+  const [selSpecCX,  setSelSpecCX]  = useState<string[]>([])
+  const [selSpecHXM, setSelSpecHXM] = useState<string[]>([])
+  const [selSpecProcurement, setSelSpecProcurement] = useState<string[]>([])
+  const [selSpecDSC, setSelSpecDSC] = useState<string[]>([])
+  const [selSpecBTP, setSelSpecBTP] = useState<string[]>([])
+  const [selSpecBDC, setSelSpecBDC] = useState<string[]>([])
+  const [selSpecFIN, setSelSpecFIN] = useState<string[]>([])
+  const [selSpecPRO, setSelSpecPRO] = useState<string[]>([])
+  const [selSolL1,   setSelSolL1]   = useState<string[]>([])
+  const [selSolL2,   setSelSolL2]   = useState<string[]>([])
 
   const [expandedAEs,  setExpandedAEs]  = useState({})
   const [selectedAE,   setSelectedAE]   = useState(null)
@@ -239,6 +255,20 @@ export function AEAnalysisPage() {
   selQtrs.forEach(v => params.append('closing_qtrs', v))
   selISS.forEach(v => params.append('iss_groups', v))
   selDRM.forEach(v => params.append('drm_cats', v))
+  selPriorities.forEach(v => params.append('priorities', v))
+  if (probMin) params.set('probability_min', probMin)
+  if (probMax) params.set('probability_max', probMax)
+  selIAEs.forEach(v => params.append('iaes', v))
+  selSpecCX.forEach(v => params.append('spec_cxs', v))
+  selSpecHXM.forEach(v => params.append('spec_hxms', v))
+  selSpecProcurement.forEach(v => params.append('spec_procurements', v))
+  selSpecDSC.forEach(v => params.append('spec_dscs', v))
+  selSpecBTP.forEach(v => params.append('spec_btps', v))
+  selSpecBDC.forEach(v => params.append('spec_bdcs', v))
+  selSpecFIN.forEach(v => params.append('spec_fins', v))
+  selSpecPRO.forEach(v => params.append('spec_pros', v))
+  selSolL1.forEach(v => params.append('sol_l1s', v))
+  selSolL2.forEach(v => params.append('sol_l2s', v))
 
   const { data: territory, isLoading: loadingTerritory } = useQuery({
     queryKey: ['ae-territory', params.toString()],
@@ -250,7 +280,7 @@ export function AEAnalysisPage() {
   if (selectedAE)  oppParams.set('ae', selectedAE)
   if (selectedInd) oppParams.set('industry', selectedInd)
 
-  const anyFilterActive = !!(selectedAE || selectedInd || selAEs.length || selFLSMs.length || selRegions.length || selReg4.length || selQtrs.length || selISS.length || selDRM.length)
+  const anyFilterActive = !!(selectedAE || selectedInd || selAEs.length || selFLSMs.length || selRegions.length || selReg4.length || selQtrs.length || selISS.length || selDRM.length || selPriorities.length || probMin || probMax)
 
   const { data: oppsData, isLoading: loadingOpps } = useQuery({
     queryKey: ['ae-opps', oppParams.toString()],
@@ -431,8 +461,32 @@ export function AEAnalysisPage() {
             <MultiSel label="Closing Quarter" options={filters.closing_qtrs||[]}  value={selQtrs}    onChange={setSelQtrs} />
             <MultiSel label="ISS Group"       options={filters.iss_groups||[]}    value={selISS}     onChange={setSelISS} />
             <MultiSel label="DRM Category"    options={filters.drm_cats||[]}      value={selDRM}     onChange={setSelDRM} />
-            {(selAEs.length+selFLSMs.length+selRegions.length+selReg4.length+selQtrs.length+selISS.length+selDRM.length) > 0 && (
-              <button onClick={() => { setSelAEs([]); setSelFLSMs([]); setSelRegions([]); setSelReg4([]); setSelQtrs([]); setSelISS([]); setSelDRM([]) }}
+            <MultiSel label="Priority" options={['1','2','3','4','5','6','7','8','9','10']} value={selPriorities} onChange={setSelPriorities} />
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Probability %</label>
+              <div className="flex items-center gap-1">
+                <input type="number" min="0" max="100" placeholder="Min"
+                  value={probMin} onChange={e => setProbMin(e.target.value)}
+                  className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-blue-500" />
+                <span className="text-gray-400 text-[11px]">–</span>
+                <input type="number" min="0" max="100" placeholder="Max"
+                  value={probMax} onChange={e => setProbMax(e.target.value)}
+                  className="w-20 border border-gray-200 rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-blue-500" />
+              </div>
+            </div>
+            <SearchMultiSel label="IAE"              options={filters.iaes||[]}              value={selIAEs}             onChange={setSelIAEs} />
+            <SearchMultiSel label="SPEC CX"          options={filters.spec_cxs||[]}          value={selSpecCX}           onChange={setSelSpecCX} />
+            <SearchMultiSel label="SPEC HXM"         options={filters.spec_hxms||[]}         value={selSpecHXM}          onChange={setSelSpecHXM} />
+            <SearchMultiSel label="SPEC Procurement" options={filters.spec_procurements||[]}  value={selSpecProcurement}  onChange={setSelSpecProcurement} />
+            <SearchMultiSel label="SPEC DSC"         options={filters.spec_dscs||[]}         value={selSpecDSC}          onChange={setSelSpecDSC} />
+            <SearchMultiSel label="SPEC BTP"         options={filters.spec_btps||[]}         value={selSpecBTP}          onChange={setSelSpecBTP} />
+            <SearchMultiSel label="SPEC BDC"         options={filters.spec_bdcs||[]}         value={selSpecBDC}          onChange={setSelSpecBDC} />
+            <SearchMultiSel label="SPEC FIN"         options={filters.spec_fins||[]}         value={selSpecFIN}          onChange={setSelSpecFIN} />
+            <SearchMultiSel label="SPEC PRO"         options={filters.spec_pros||[]}         value={selSpecPRO}          onChange={setSelSpecPRO} />
+            <SearchMultiSel label="Solution L1"      options={filters.solutions_l1||[]}      value={selSolL1}            onChange={setSelSolL1} />
+            <SearchMultiSel label="Solution L2"      options={filters.solutions_l2||[]}      value={selSolL2}            onChange={setSelSolL2} />
+            {(selAEs.length+selFLSMs.length+selRegions.length+selReg4.length+selQtrs.length+selISS.length+selDRM.length+selPriorities.length+(probMin?1:0)+(probMax?1:0)+selIAEs.length+selSpecCX.length+selSpecHXM.length+selSpecProcurement.length+selSpecDSC.length+selSpecBTP.length+selSpecBDC.length+selSpecFIN.length+selSpecPRO.length+selSolL1.length+selSolL2.length) > 0 && (
+              <button onClick={() => { setSelAEs([]); setSelFLSMs([]); setSelRegions([]); setSelReg4([]); setSelQtrs([]); setSelISS([]); setSelDRM([]); setSelPriorities([]); setProbMin(''); setProbMax(''); setSelIAEs([]); setSelSpecCX([]); setSelSpecHXM([]); setSelSpecProcurement([]); setSelSpecDSC([]); setSelSpecBTP([]); setSelSpecBDC([]); setSelSpecFIN([]); setSelSpecPRO([]); setSelSolL1([]); setSelSolL2([]) }}
                 className="text-xs text-red-500 hover:text-red-700 flex items-center gap-1">
                 <X size={12}/> Clear all
               </button>
@@ -446,6 +500,7 @@ export function AEAnalysisPage() {
         {[
           { key: 'territory', label: '🗺️ Territory by AE' },
           { key: 'industry',  label: '📊 Industry Propensity 2026–2027' },
+          { key: 'audience',  label: '🎯 Audiência' },
         ].map(t => (
           <button key={t.key} onClick={() => setActiveTab(t.key)}
             className={`px-5 py-3 text-sm font-500 border-b-2 transition-colors ${activeTab===t.key?'border-blue-600 text-blue-700':'border-transparent text-gray-500 hover:text-gray-700'}`}
@@ -582,7 +637,7 @@ export function AEAnalysisPage() {
                 {allExpanded ? <><ChevronDown size={12}/> Collapse all</> : <><ChevronRight size={12}/> Expand all</>}
               </button>
             )}
-            {opps.length > 0 && (
+            {opps.length > 0 && canExport && (
               <>
                 <button onClick={handleExport} className="flex items-center gap-1.5 text-xs border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50">
                   <Download size={12}/> Export Pipeline
@@ -668,7 +723,7 @@ export function AEAnalysisPage() {
                   <X size={12}/> Clear selection
                 </button>
               )}
-              {opps.length > 0 && (
+              {opps.length > 0 && canExport && (
                 <>
                   <button onClick={handleExport} className="flex items-center gap-1.5 text-xs border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50">
                     <Download size={12}/> Excel
@@ -713,9 +768,56 @@ export function AEAnalysisPage() {
                         <React.Fragment key={account}>
                           <tr className="bg-blue-50 border-b border-blue-100">
                             <td colSpan={10} className="px-2 py-1.5">
-                              <div className="flex items-center justify-between">
-                                <span className="font-700 text-blue-900" style={{fontSize:'11px'}}>{account}</span>
-                                <span className="font-700 text-blue-700 ml-4" style={{fontSize:'11px'}}>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-700 text-blue-900" style={{fontSize:'11px'}}>{account}</span>
+                                  {/* Solution chips */}
+                                  {(() => {
+                                    const sols = [...new Set(rows.flatMap(r => (r.solutions_l2||[]).length > 0 ? r.solutions_l2 : r.solutions_l1||[]))]
+                                    if (!sols.length) return null
+                                    return (
+                                      <div className="flex flex-wrap gap-0.5 mt-0.5">
+                                        {sols.slice(0, 8).map(s => (
+                                          <span key={s} className="bg-white text-blue-700 border border-blue-200 rounded px-1 py-0 truncate max-w-[140px]" title={s} style={{fontSize:'9px'}}>{s}</span>
+                                        ))}
+                                        {sols.length > 8 && <span className="text-blue-400" style={{fontSize:'9px'}}>+{sols.length - 8} more</span>}
+                                      </div>
+                                    )
+                                  })()}
+                                  {/* Opp IDs + DRM + Owners */}
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                                    {/* Opportunity IDs */}
+                                    <div className="flex flex-wrap gap-0.5">
+                                      {rows.map(r => (
+                                        <span key={r.opportunity_id} className="bg-white text-blue-500 border border-blue-100 rounded px-1 py-0 font-mono" title={r.opportunity_id} style={{fontSize:'9px'}}>{r.opportunity_id}</span>
+                                      ))}
+                                    </div>
+                                    {/* DRM breakdown */}
+                                    {(() => {
+                                      const drm = rows.reduce<Record<string,number>>((acc, r) => {
+                                        const cat = r.drm_category || 'Unknown'
+                                        acc[cat] = (acc[cat] || 0) + 1
+                                        return acc
+                                      }, {})
+                                      const colors: Record<string,string> = {
+                                        'Commit': 'bg-green-100 text-green-700',
+                                        'Upside': 'bg-yellow-100 text-yellow-700',
+                                        'Pipeline': 'bg-blue-100 text-blue-600',
+                                        'Booked/Won': 'bg-emerald-100 text-emerald-700',
+                                      }
+                                      return Object.entries(drm).map(([cat, cnt]) => (
+                                        <span key={cat} className={`rounded px-1 py-0 font-600 ${colors[cat] || 'bg-gray-100 text-gray-600'}`} style={{fontSize:'9px'}}>
+                                          {cnt} {cat}
+                                        </span>
+                                      ))
+                                    })()}
+                                    {/* AE Owners */}
+                                    {[...new Set(rows.map(r => r.opp_owner_name).filter(Boolean))].map(ae => (
+                                      <span key={ae} className="text-gray-500 bg-gray-50 border border-gray-200 rounded px-1 py-0" style={{fontSize:'9px'}}>&#128100; {ae}</span>
+                                    ))}
+                                  </div>
+                                </div>
+                                <span className="font-700 text-blue-700 flex-shrink-0" style={{fontSize:'11px'}}>
                                   {rows.length} opp{rows.length!==1?'s':''} · {formatAcvK(accountACV*fxRate, currency)}
                                 </span>
                               </div>
@@ -791,6 +893,13 @@ export function AEAnalysisPage() {
       </> /* end territory tab */}
 
       {activeTab === 'industry' && <IndustryPropensityTab />}
+
+      {activeTab === 'audience' && (
+        <AudienceTab
+          selAEs={selAEs} selFLSMs={selFLSMs} selRegions={selRegions} selReg4={selReg4}
+          selQtrs={selQtrs} selISS={selISS} selDRM={selDRM}
+        />
+      )}
 
       {/* Email Modal */}
       {emailModal && (

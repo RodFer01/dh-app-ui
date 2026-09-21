@@ -315,6 +315,9 @@ export function MelodyPage() {
 
       {/* ── VAT Gaps ─────────────────────────────────────────────────────── */}
       <VatGapsSection fx={fxRate} currency={currency} />
+
+      {/* ── Role Mismatch ────────────────────────────────────────────────── */}
+      <RoleMismatchSection fx={fxRate} currency={currency} />
     </div>
   )
 }
@@ -470,6 +473,157 @@ function VatGapsSection({ fx, currency }: { fx: number; currency: string }) {
           {isLoading
             ? <div className="text-sap-muted text-sm py-8 text-center">Loading…</div>
             : <DataTable rows={gaps} cols={gapCols} height={480} />
+          }
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// ── Role Mismatch Section ────────────────────────────────────────────────────
+function RoleMismatchSection({ fx, currency }: { fx: number; currency: string }) {
+  const [saFilter, setSaFilter] = useState('')
+  const [drmFilter, setDrmFilter] = useState<string[]>([])
+  const [teamFilter, setTeamFilter] = useState('')
+  const [collapsed, setCollapsed] = useState(false)
+
+  const params = {
+    ...(saFilter ? { digital_sa: saFilter } : {}),
+    ...(drmFilter.length ? { drm_categories: drmFilter } : {}),
+    ...(teamFilter ? { team: teamFilter } : {}),
+  }
+
+  const { data: summary = {} } = useQuery({
+    queryKey: ['vat-role-mismatch-summary', params],
+    queryFn: () => api.get('/api/melody/vat-role-mismatch/summary', { params }).then(r => r.data),
+    staleTime: 5 * 60_000,
+  })
+
+  const { data: mismatches = [], isLoading } = useQuery({
+    queryKey: ['vat-role-mismatch', params],
+    queryFn: () => api.get('/api/melody/vat-role-mismatch', { params }).then(r => r.data),
+    staleTime: 5 * 60_000,
+  })
+
+  const totalAcv = useMemo(() => {
+    const seen = new Set<string>()
+    let sum = 0
+    for (const r of mismatches as Row[]) {
+      const oid = r.opportunity_id as string
+      if (oid && !seen.has(oid)) {
+        seen.add(oid)
+        sum += (Number(r.acv_total_opp) || 0) * fx
+      }
+    }
+    return sum
+  }, [mismatches, fx])
+
+  const mismatchCols: ColDef[] = [
+    { field: 'sales_team_member_name', headerName: 'SA Name',     width: 160 },
+    { field: 'sales_team_role',        headerName: 'Role in VAT', width: 190,
+      cellStyle: () => ({ color: '#CC0000', fontWeight: 700 }) },
+    { field: 'sa_team',                headerName: 'SA Team',     width: 150 },
+    oppIdCol,
+    { field: 'account_name',           headerName: 'Account',     flex: 1, minWidth: 150 },
+    { field: 'opp_owner_name',         headerName: 'AE Owner',    width: 140 },
+    { field: 'solution_area_l1',       headerName: 'Solution L1', width: 160 },
+    { field: 'drm_category',           headerName: 'DRM Cat',     width: 120 },
+    { field: 'opp_phase',              headerName: 'Phase',       width: 120 },
+    { field: 'closing_qtr',            headerName: 'Closing Qtr', width: 100 },
+    { field: 'region_lvl3',            headerName: 'Region',      width: 110 },
+    acvCol('acv_total_opp', fx, currency, `ACV (${currency})`, 140),
+    { field: 'flsm',                   headerName: 'Sales Manager', width: 140 },
+  ]
+
+  return (
+    <div className="mt-4">
+      <div
+        className="flex items-center justify-between cursor-pointer px-4 py-3 bg-[#FFF0F0] border border-[#CC0000] rounded-t-xl"
+        onClick={() => setCollapsed(c => !c)}
+      >
+        <div className="flex items-center gap-2">
+          <AlertTriangle size={16} className="text-[#CC0000]" />
+          <span className="font-bold text-[14px] text-sap-text">Role Mismatch — Digital SA not classified as Digital Solution Advisor</span>
+          {!collapsed && (
+            <span className="text-[11px] text-sap-muted ml-2">
+              {summary.total_mismatches || 0} SA-opp pairs · {summary.distinct_opps || 0} opps · {summary.distinct_sas || 0} SAs
+            </span>
+          )}
+        </div>
+        <span className="text-[11px] text-sap-muted">{collapsed ? 'Show ▼' : 'Hide ▲'}</span>
+      </div>
+
+      {!collapsed && (
+        <div className="border border-t-0 border-[#CC0000] rounded-b-xl p-4">
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="card p-3 bg-[#FFF0F0]">
+              <div className="text-[10px] font-bold text-[#CC0000] uppercase tracking-wide mb-1">Role Mismatches</div>
+              <div className="text-[20px] font-bold text-[#CC0000]">{summary.total_mismatches || 0}</div>
+              <div className="text-[11px] text-sap-muted">SA-opportunity pairs</div>
+            </div>
+            <div className="card p-3">
+              <div className="text-[10px] font-bold text-sap-muted uppercase tracking-wide mb-1">Opportunities</div>
+              <div className="text-[20px] font-bold text-sap-text">{summary.distinct_opps || 0}</div>
+              <div className="text-[11px] text-sap-muted">distinct opps with mismatch</div>
+            </div>
+            <div className="card p-3">
+              <div className="text-[10px] font-bold text-sap-muted uppercase tracking-wide mb-1">ACV Exposed</div>
+              <div className="text-[20px] font-bold text-sap-error">{formatAcvK(totalAcv, currency)}</div>
+              <div className="text-[11px] text-sap-muted">{summary.distinct_sas || 0} SAs affected</div>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3 mb-4">
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-sap-muted uppercase tracking-wide">Team</label>
+              <select
+                value={teamFilter} onChange={e => setTeamFilter(e.target.value)}
+                className="border border-sap-border rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-sap-blue bg-white"
+              >
+                <option value="">All Teams</option>
+                {TEAMS.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-sap-muted uppercase tracking-wide">Digital SA</label>
+              <input
+                value={saFilter} onChange={e => setSaFilter(e.target.value)}
+                placeholder="Search SA name…"
+                className="border border-sap-border rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-sap-blue w-52"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold text-sap-muted uppercase tracking-wide">DRM Category</label>
+              <div className="flex flex-wrap gap-1">
+                {DRM_CATS.map(d => (
+                  <button key={d} onClick={() => setDrmFilter(p => p.includes(d) ? p.filter(x => x !== d) : [...p, d])}
+                    className={`text-[11px] px-2 py-1 rounded-lg border font-semibold transition ${
+                      drmFilter.includes(d) ? 'bg-sap-blue text-white border-sap-blue' : 'border-sap-border text-sap-muted hover:bg-sap-bg'
+                    }`}>
+                    {d}
+                  </button>
+                ))}
+                {drmFilter.length > 0 && (
+                  <button onClick={() => setDrmFilter([])} className="text-[10px] text-sap-error hover:underline self-center ml-1">Clear</button>
+                )}
+              </div>
+            </div>
+            <ExcelDownloadButton
+              rows={mismatches} cols={mismatchCols}
+              defaultFilename="vat_role_mismatch.xlsx" sheetName="Role Mismatch"
+              className="flex items-center gap-1.5 text-xs font-semibold border border-sap-border rounded-lg px-3 py-1.5 hover:bg-sap-bg transition ml-auto"
+            />
+          </div>
+
+          <p className="text-xs text-sap-subtle mb-2">
+            {(mismatches as Row[]).length} records · {formatAcvK(totalAcv, currency)} ACV (distinct opps)
+            {(saFilter || drmFilter.length > 0 || teamFilter) && ' (filtered)'}
+          </p>
+
+          {isLoading
+            ? <div className="text-sap-muted text-sm py-8 text-center">Loading…</div>
+            : <DataTable rows={mismatches as Row[]} cols={mismatchCols} height={480} />
           }
         </div>
       )}

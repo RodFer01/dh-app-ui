@@ -16,9 +16,12 @@ const ONLINE_APPS = [
   { to: '/qualification',   picto: '/icons/qualification.svg', label: 'Deal Qualification', module: 'qualification' },
   { to: '/lac-results',     picto: '/icons/results.svg',       label: 'LAC Results',        module: 'lac_results' },
   { to: '/erp-team',        picto: '/icons/erp.svg',           label: 'ERP Team',           module: 'erp_team' },
+  { to: '/lobs-team',       picto: '/icons/lobs.svg',          label: 'LoBs Team',          module: 'lobs_team' },
   { to: '/melody-requests', picto: '/icons/requests.svg',      label: 'Melody Requests',    module: 'melody_requests' },
   { to: '/yoy',             picto: '/icons/yoy.svg',           label: '2025 vs 2026',       module: 'yoy' },
   { to: '/scheduler',       picto: '/icons/scheduler.svg',     label: 'Pipeline Scheduler', module: 'scheduler' },
+  { to: '/campaigns',       picto: '/icons/requests.svg',      label: 'Campanhas',          module: 'campaigns' },
+  { to: '/bookings',        picto: '/icons/results.svg',       label: 'Bookings',           module: 'bookings' },
 ]
 
 const LOCAL_APPS = [

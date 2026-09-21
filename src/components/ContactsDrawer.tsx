@@ -789,7 +789,7 @@ function AccountSolutionMapTab({ accountBp, accountName }) {
 export function ContactsDrawerInline({ opp, onClose }) {
   const qc = useQueryClient()
   const [selectedContact, setSelectedContact] = useState(null)
-  const [activeTab, setActiveTab]             = useState<'contacts'|'suggestions'|'competitors'>('contacts')
+  const [activeTab, setActiveTab]             = useState<'contacts'|'suggestions'|'competitors'|'account-map'|'installed-base'>('contacts')
 
   const accountBp = opp?.account_bp
 
@@ -802,6 +802,12 @@ export function ContactsDrawerInline({ opp, onClose }) {
     queryKey: ['opp-competitors', opp?.opportunity_id],
     queryFn: () => api.get(`/api/outreach/competitors/${opp.opportunity_id}`).then(r => r.data),
     enabled: !!opp?.opportunity_id,
+  })
+  const { data: installedBaseData } = useQuery({
+    queryKey: ['installed-base', accountBp],
+    queryFn: () => api.get(`/api/ae-analysis/installed-base/${accountBp}`).then(r => r.data),
+    enabled: !!accountBp && activeTab === 'installed-base',
+    staleTime: 5 * 60 * 1000,
   })
   const saveCompetitor = async (body: any) => {
     await api.post('/api/outreach/competitors', { ...body, opportunity_id: opp.opportunity_id })
@@ -835,10 +841,11 @@ export function ContactsDrawerInline({ opp, onClose }) {
   if (!opp) return null
 
   const TABS = [
-    { key: 'contacts',    label: `Contacts (${dedupedContacts.length})` },
-    { key: 'suggestions', label: `Suggestions (${suggestions.length})` },
-    { key: 'competitors', label: 'Competitors' },
-    { key: 'account-map', label: '🗺 Account Map' },
+    { key: 'contacts',       label: `Contacts (${dedupedContacts.length})` },
+    { key: 'suggestions',    label: `Suggestions (${suggestions.length})` },
+    { key: 'competitors',    label: 'Competitors' },
+    { key: 'account-map',    label: '🗺 Account Map' },
+    { key: 'installed-base', label: '📦 Installed Base' },
   ] as const
 
   return (
@@ -963,7 +970,87 @@ export function ContactsDrawerInline({ opp, onClose }) {
         {activeTab === 'account-map' && (
           <AccountSolutionMapTab accountBp={opp.account_bp} accountName={opp.account_name} />
         )}
+
+        {/* Installed Base tab */}
+        {activeTab === 'installed-base' && (
+          <InstalledBaseTab
+            data={installedBaseData}
+            oppSolutionsL1={opp.solutions_l1 || []}
+          />
+        )}
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── InstalledBaseTab ──────────────────────────────────────────────────────────
+const STATUS_STYLE = {
+  'Live':             'bg-green-100 text-green-700 border border-green-200',
+  'Project':          'bg-blue-100 text-blue-700 border border-blue-200',
+  'Unused/Shelfware': 'bg-amber-100 text-amber-700 border border-amber-200',
+}
+const STATUS_ICON = { 'Live': '✅', 'Project': '🔧', 'Unused/Shelfware': '⚠️' }
+
+function InstalledBaseTab({ data, oppSolutionsL1 }: { data: any; oppSolutionsL1: string[] }) {
+  if (!data) {
+    return <div className="flex items-center justify-center py-10 text-xs text-gray-400">Loading installed base…</div>
+  }
+
+  const solutions: Record<string, Array<{ product_label: string; status: string }>> = data.solutions || {}
+  const entries = Object.entries(solutions)
+
+  if (entries.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-10 gap-2 text-center">
+        <span className="text-2xl">📦</span>
+        <p className="text-xs text-gray-500">No installed base data for this account.</p>
+        <p className="text-[10px] text-gray-400">Run the Innovation Dashboard ETL to populate.</p>
+      </div>
+    )
+  }
+
+  const oppL1Lower = oppSolutionsL1.map(s => s.toLowerCase())
+  const isInPipeline = (l1: string) =>
+    oppL1Lower.some(s => s.includes(l1.toLowerCase().split(' ')[0]))
+
+  const totalLive    = entries.filter(([, ps]) => ps.some(p => p.status === 'Live')).length
+  const totalProject = entries.filter(([, ps]) => ps.some(p => p.status === 'Project')).length
+  const totalUnused  = entries.filter(([, ps]) => ps.some(p => p.status === 'Unused/Shelfware')).length
+  const netNew       = oppSolutionsL1.filter(s => !entries.some(([l1]) => isInPipeline(l1))).length
+
+  return (
+    <div className="p-4">
+      <div className="flex flex-wrap gap-2 mb-4 pb-3 border-b border-gray-100">
+        <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-green-100 text-green-700">✅ {totalLive} Live</span>
+        <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700">🔧 {totalProject} In Project</span>
+        <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-amber-100 text-amber-700">⚠️ {totalUnused} Unused</span>
+        {netNew > 0 && (
+          <span className="px-2 py-1 rounded-full text-[10px] font-semibold bg-purple-100 text-purple-700">✨ {netNew} Net New in pipeline</span>
+        )}
+      </div>
+      <div className="space-y-3">
+        {entries.map(([l1, products]) => {
+          const inPipeline = isInPipeline(l1)
+          return (
+            <div key={l1} className={`rounded-lg border px-3 py-2.5 ${inPipeline ? 'border-blue-300 bg-blue-50/50' : 'border-gray-200 bg-white'}`}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className={`text-[12px] font-semibold ${inPipeline ? 'text-blue-700' : 'text-gray-800'}`}>{l1}</span>
+                {inPipeline && (
+                  <span className="text-[10px] font-semibold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">🎯 In Pipeline</span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {products.map(p => (
+                  <span key={p.product_label}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_STYLE[p.status] || 'bg-gray-100 text-gray-600'}`}>
+                    {STATUS_ICON[p.status]} {p.product_label}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

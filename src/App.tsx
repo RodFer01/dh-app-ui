@@ -27,6 +27,8 @@ import { OutlookFlaggedPage }    from './pages/OutlookFlaggedPage'
 import { IdeaZonePage }          from './pages/IdeaZonePage'
 import { AdminPage }             from './pages/AdminPage'
 import { AEAnalysisPage }        from './pages/AEAnalysisPage'
+import { CampaignsPage }          from './pages/CampaignsPage'
+import { BookingsPage }           from './pages/BookingsPage'
 import { Component } from 'react'
 
 class ErrorBoundary extends Component {
@@ -80,6 +82,8 @@ function AppLayout() {
               <Route path="/outlook-flagged" element={<ProtectedRoute><OutlookFlaggedPage /></ProtectedRoute>} />
               <Route path="/idea-zone"       element={<ProtectedRoute module="idea_zone"><IdeaZonePage /></ProtectedRoute>} />
               <Route path="/ae-analysis"     element={<ProtectedRoute module="ae_analysis"><AEAnalysisPage /></ProtectedRoute>} />
+              <Route path="/campaigns"       element={<ProtectedRoute module="campaigns"><CampaignsPage /></ProtectedRoute>} />
+              <Route path="/bookings"        element={<ProtectedRoute module="bookings"><BookingsPage /></ProtectedRoute>} />
               <Route path="/admin"           element={<ProtectedRoute module="admin"><AdminPage /></ProtectedRoute>} />
               <Route path="*"                element={<Navigate to="/" replace />} />
             </Routes>

@@ -26,5 +26,6 @@ dist-ssr
 # Sensitive — NEVER commit
 .env.production
 .env.local
+manifest.yml
 
 *.bak

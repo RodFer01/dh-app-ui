@@ -62,7 +62,7 @@ function JobRow({ job, active, onClick }: { job: Job; active: boolean; onClick: 
 
 export function ETLPage() {
   const qc = useQueryClient()
-  const [selectedFile, setSelectedFile] = useState<Record<string, File | null>>({})
+  const [selectedFile, setSelectedFile] = useState<Record<string, File[]>>({})
   const [activeJob, setActiveJob] = useState<string | null>(null)
   const logRef = useRef<HTMLPreElement>(null)
 
@@ -101,9 +101,11 @@ export function ETLPage() {
   }, [activeJobData?.log])
 
   const runMut = useMutation({
-    mutationFn: async ({ sourceId, file }: { sourceId: string; file?: File }) => {
+    mutationFn: async ({ sourceId, files }: { sourceId: string; files?: File[] }) => {
       const form = new FormData()
-      if (file) form.append('file', file)
+      if (files?.length) {
+        for (const f of files) form.append('files', f)
+      }
       const res = await api.post(`/api/etl/run/${sourceId}`, form, {
         headers: { 'Content-Type': 'multipart/form-data' },
       })
@@ -116,11 +118,12 @@ export function ETLPage() {
   })
 
   function handleRun(src: Source) {
-    const file = selectedFile[src.id] ?? undefined
-    runMut.mutate({ sourceId: src.id, file })
+    const files = selectedFile[src.id] ?? []
+    runMut.mutate({ sourceId: src.id, files: files.length ? files : undefined })
   }
 
   // Group sources
+  const MULTI_FILE_SOURCES = new Set(['pipeline', 'pipeline_lw'])
   const csvSources = sources.filter(s => s.accept === '.csv' && s.id !== 'full_run')
   const xlsxSources = sources.filter(s => s.accept === '.xlsx')
   const fullRun = sources.find(s => s.id === 'full_run')
@@ -141,8 +144,9 @@ export function ETLPage() {
               <SectionLabel>Full ETL</SectionLabel>
               <SourceCard
                 src={fullRun}
-                file={null}
-                onFileChange={() => {}}
+                files={[]}
+                multi={false}
+                onFilesChange={() => {}}
                 onRun={() => handleRun(fullRun)}
                 running={runMut.isPending && runMut.variables?.sourceId === fullRun.id}
                 highlight
@@ -157,8 +161,9 @@ export function ETLPage() {
                 <SourceCard
                   key={src.id}
                   src={src}
-                  file={selectedFile[src.id] ?? null}
-                  onFileChange={(f) => setSelectedFile(p => ({ ...p, [src.id]: f }))}
+                  files={selectedFile[src.id] ?? []}
+                  multi={MULTI_FILE_SOURCES.has(src.id)}
+                  onFilesChange={(fs) => setSelectedFile(p => ({ ...p, [src.id]: fs }))}
                   onRun={() => handleRun(src)}
                   running={runMut.isPending && runMut.variables?.sourceId === src.id}
                 />
@@ -173,8 +178,9 @@ export function ETLPage() {
                 <SourceCard
                   key={src.id}
                   src={src}
-                  file={selectedFile[src.id] ?? null}
-                  onFileChange={(f) => setSelectedFile(p => ({ ...p, [src.id]: f }))}
+                  files={selectedFile[src.id] ?? []}
+                  multi={false}
+                  onFilesChange={(fs) => setSelectedFile(p => ({ ...p, [src.id]: fs }))}
                   onRun={() => handleRun(src)}
                   running={runMut.isPending && runMut.variables?.sourceId === src.id}
                 />
@@ -224,11 +230,12 @@ export function ETLPage() {
 
 // ── SourceCard ─────────────────────────────────────────────────────────────────
 function SourceCard({
-  src, file, onFileChange, onRun, running, highlight = false,
+  src, files, multi, onFilesChange, onRun, running, highlight = false,
 }: {
   src: Source
-  file: File | null
-  onFileChange: (f: File | null) => void
+  files: File[]
+  multi: boolean
+  onFilesChange: (fs: File[]) => void
   onRun: () => void
   running: boolean
   highlight?: boolean
@@ -245,9 +252,12 @@ function SourceCard({
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-semibold text-sap-text">{src.label}</p>
         <p className="text-[11px] text-sap-muted truncate">{src.desc}</p>
-        {file && (
+        {files.length > 0 && (
           <span className="text-[11px] text-sap-success font-medium">
-            📎 {file.name} ({(file.size / 1024).toFixed(0)} KB)
+            {files.length === 1
+              ? `📎 ${files[0].name} (${(files[0].size / 1024).toFixed(0)} KB)`
+              : `📎 ${files.length} arquivos selecionados (${(files.reduce((s, f) => s + f.size, 0) / 1024).toFixed(0)} KB total)`
+            }
           </span>
         )}
       </div>
@@ -259,14 +269,15 @@ function SourceCard({
             ref={inputRef}
             type="file"
             accept={src.accept}
+            multiple={multi}
             className="hidden"
-            onChange={e => onFileChange(e.target.files?.[0] ?? null)}
+            onChange={e => onFilesChange(e.target.files ? Array.from(e.target.files) : [])}
           />
           <button
             onClick={() => inputRef.current?.click()}
             className="flex items-center gap-1.5 text-xs font-semibold border border-sap-border rounded-lg px-3 py-1.5 hover:bg-sap-bg transition text-sap-muted"
           >
-            <Upload size={12} /> Select
+            <Upload size={12} /> {multi ? 'Select files' : 'Select'}
           </button>
         </>
       )}

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Download } from 'lucide-react'
 import { exportToExcel } from '../lib/exportExcel'
 import { FilenamePrompt } from './FilenamePrompt'
+import { useAuth } from '../context/AuthContext'
 
 interface Props {
   rows: any[]
@@ -13,7 +14,10 @@ interface Props {
 }
 
 export function ExcelDownloadButton({ rows, cols, defaultFilename, sheetName, label = 'Download Excel', className }: Props) {
+  const { user } = useAuth()
   const [promptOpen, setPromptOpen] = useState(false)
+
+  if (!user || !['admin', 'manager'].includes(user.role ?? '')) return null
 
   const handleConfirm = (name: string) => {
     setPromptOpen(false)

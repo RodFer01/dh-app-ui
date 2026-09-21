@@ -249,6 +249,7 @@ export function OpportunityListPage() {
     'closing_qtr','fc_qualification','iss_group_text','account_planned_archetype_text',
     'local_acct_owner','channel_partner','channel_manager','flsm','vat_dh','vat_full','vat_size',
     'dda_status','range_aging','aging_up_today',
+    'iae',
   ]
 
   const [visibleCols, setVisibleCols] = useState<Set<string>>(new Set(BASE_COL_KEYS))
@@ -353,6 +354,16 @@ export function OpportunityListPage() {
     { key: 'dda_status',        def: { field:'dda_status',          headerName:'DDA Status',    width:130 } },
     { key: 'range_aging',       def: { field:'range_aging',         headerName:'Range Aging',   width:120 } },
     { key: 'aging_up_today',    def: { field:'aging_up_today',      headerName:'Aging (days)',  width:100 } },
+    // SPEC / IAE columns — from account_specs via account_bp
+    { key: 'iae',              def: { field:'iae',              headerName:'IAE',              width:150 } },
+    { key: 'spec_cx',          def: { field:'spec_cx',          headerName:'SPEC CX',          width:140 } },
+    { key: 'spec_hxm',         def: { field:'spec_hxm',         headerName:'SPEC HXM',         width:140 } },
+    { key: 'spec_btp',         def: { field:'spec_btp',         headerName:'SPEC BTP',         width:140 } },
+    { key: 'spec_procurement', def: { field:'spec_procurement', headerName:'SPEC Procurement', width:160 } },
+    { key: 'spec_dsc',         def: { field:'spec_dsc',         headerName:'SPEC DSC',         width:140 } },
+    { key: 'spec_bdc',         def: { field:'spec_bdc',         headerName:'SPEC BDC',         width:140 } },
+    { key: 'spec_fin',         def: { field:'spec_fin',         headerName:'SPEC FIN',         width:140 } },
+    { key: 'spec_pro',         def: { field:'spec_pro',         headerName:'SPEC PRO',         width:140 } },
   ]
 
   const cols = ALL_COL_DEFS

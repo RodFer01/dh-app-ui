@@ -6,7 +6,7 @@ import { SectionLabel } from '../components/SectionLabel'
 import { OutlookTokenBanner } from '../components/OutlookTokenBanner'
 import { useAuth } from '../context/AuthContext'
 import { formatAcvK } from '../lib/utils'
-import { Plus, Trash2, Mail, ChevronDown, ChevronUp, Edit2, Check, X } from 'lucide-react'
+import { Plus, Trash2, Mail, ChevronDown, ChevronUp, Edit2, Check, X, LayoutList, Users } from 'lucide-react'
 
 interface Member { inumber: string; name: string; area: string }
 interface Session {
@@ -118,11 +118,62 @@ function SessionCard({ s, onEdit, onDelete, onDraft, drafting }: any) {
   )
 }
 
+function PersonGroup({ name, area, sessions, onEdit, onDelete, onDraft, draftingId }: any) {
+  const [open, setOpen] = useState(false)
+  const initials = name.split(' ').filter(Boolean).slice(0, 2).map((p: string) => p[0]).join('').toUpperCase()
+  const lastDate = sessions[0]?.meeting_date
+  const fmtDate = (d: string) => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+
+  return (
+    <div className="card overflow-hidden mb-4">
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-sap-bg select-none"
+        onClick={() => setOpen(o => !o)}
+      >
+        <div className="w-9 h-9 rounded-full bg-sap-blue text-white text-[13px] font-bold flex items-center justify-center flex-shrink-0">
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-[14px] text-sap-text">{name}</span>
+            {area && <Badge label={area} color="#0070B8" />}
+            <span className="text-[11px] font-semibold bg-sap-blue-l text-sap-blue rounded-full px-2 py-0.5">
+              {sessions.length} session{sessions.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {lastDate && (
+            <div className="text-[12px] text-sap-muted mt-0.5">
+              Last 1:1: {fmtDate(lastDate)}
+            </div>
+          )}
+        </div>
+        {open ? <ChevronUp size={14} className="text-sap-muted flex-shrink-0" /> : <ChevronDown size={14} className="text-sap-muted flex-shrink-0" />}
+      </div>
+
+      {open && (
+        <div className="border-t border-sap-border bg-sap-bg px-3 py-3 flex flex-col gap-0">
+          {sessions.map((s: any) => (
+            <SessionCard
+              key={s.id}
+              s={s}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onDraft={onDraft}
+              drafting={draftingId === s.id}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function FeedbackSessionPage() {
   const qc = useQueryClient()
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [editId, setEditId] = useState<number | null>(null)
   const [filterMember, setFilterMember] = useState('')
+  const [viewMode, setViewMode] = useState<'list' | 'by-person'>('list')
   const [draftingId, setDraftingId] = useState<number | null>(null)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -151,6 +202,19 @@ export function FeedbackSessionPage() {
     filterMember ? sessions.filter(s => s.member_name === filterMember) : sessions,
     [sessions, filterMember]
   )
+
+  const sessionsByPerson = useMemo(() => {
+    const groups = new Map<string, { name: string; area: string; sessions: Session[] }>()
+    for (const s of filteredSessions) {
+      if (!groups.has(s.member_name)) groups.set(s.member_name, { name: s.member_name, area: s.member_area, sessions: [] })
+      groups.get(s.member_name)!.sessions.push(s)
+    }
+    return Array.from(groups.values()).sort((a, b) => {
+      const da = a.sessions[0]?.meeting_date || ''
+      const db = b.sessions[0]?.meeting_date || ''
+      return db.localeCompare(da)
+    })
+  }, [filteredSessions])
 
   // Group members by area for the dropdown
   const membersByArea = useMemo(() => {
@@ -225,14 +289,33 @@ export function FeedbackSessionPage() {
           <h2 className="text-xl font-bold text-sap-text">1:1 Feedback Sessions</h2>
           <p className="text-[12px] text-sap-muted mt-0.5">Record meeting notes, feedback and action plans for your team</p>
         </div>
-        <button
-          onClick={() => { setShowForm(o => !o); setEditId(null); setForm({ ...EMPTY_FORM }) }}
-          className={`flex items-center gap-1.5 text-[13px] font-semibold rounded-lg px-4 py-2 transition ${
-            showForm ? 'bg-sap-error text-white' : 'bg-sap-blue text-white hover:bg-sap-blue-d'
-          }`}
-        >
-          {showForm ? <><X size={14}/> Cancel</> : <><Plus size={14}/> New Session</>}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="flex rounded-lg border border-sap-border overflow-hidden">
+            <button
+              onClick={() => setViewMode('list')}
+              title="All sessions"
+              className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold transition ${viewMode === 'list' ? 'bg-sap-blue text-white' : 'text-sap-muted hover:bg-sap-bg'}`}
+            >
+              <LayoutList size={13} /> List
+            </button>
+            <button
+              onClick={() => setViewMode('by-person')}
+              title="Group by person"
+              className={`flex items-center gap-1.5 px-3 py-2 text-[12px] font-semibold transition border-l border-sap-border ${viewMode === 'by-person' ? 'bg-sap-blue text-white' : 'text-sap-muted hover:bg-sap-bg'}`}
+            >
+              <Users size={13} /> By Person
+            </button>
+          </div>
+          <button
+            onClick={() => { setShowForm(o => !o); setEditId(null); setForm({ ...EMPTY_FORM }) }}
+            className={`flex items-center gap-1.5 text-[13px] font-semibold rounded-lg px-4 py-2 transition ${
+              showForm ? 'bg-sap-error text-white' : 'bg-sap-blue text-white hover:bg-sap-blue-d'
+            }`}
+          >
+            {showForm ? <><X size={14}/> Cancel</> : <><Plus size={14}/> New Session</>}
+          </button>
+        </div>
       </div>
       <hr className="border-sap-border mb-5" />
 
@@ -338,6 +421,19 @@ export function FeedbackSessionPage() {
           <div className="text-4xl mb-3">📋</div>
           <p className="text-[14px]">No sessions yet. Click <b>New Session</b> to record your first 1:1.</p>
         </div>
+      ) : viewMode === 'by-person' ? (
+        sessionsByPerson.map(g => (
+          <PersonGroup
+            key={g.name}
+            name={g.name}
+            area={g.area}
+            sessions={g.sessions}
+            onEdit={handleEdit}
+            onDelete={(id: number) => { if (confirm(`Delete this session?`)) deleteMut.mutate(id) }}
+            onDraft={(id: number) => { setDraftingId(id); draftMut.mutate(id) }}
+            draftingId={draftingId && draftMut.isPending ? draftingId : null}
+          />
+        ))
       ) : (
         filteredSessions.map(s => (
           <SessionCard

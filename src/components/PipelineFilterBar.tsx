@@ -39,7 +39,7 @@ export function PipelineFilterBar({ filters, opts, set, clear, showEngagement = 
   }
   const hasAny =
     Object.entries(filters).some(([k, v]) =>
-      k !== 'digital_sa' && k !== 'search' && k !== 'engagement'
+      k !== 'digital_sa' && k !== 'search' && k !== 'engagement' && k !== 'probability_min' && k !== 'probability_max'
         ? (v as string[]).length > 0
         : (v as string) !== ''
     )
@@ -146,6 +146,41 @@ export function PipelineFilterBar({ filters, opts, set, clear, showEngagement = 
             ))}
           </div>
         </div>
+
+        <MultiSelect label="Priority"
+          selected={filters.priorities}
+          options={['1','2','3','4','5','6','7','8','9','10']}
+          onChange={v => set('priorities', v)}
+        />
+
+        <div className="flex flex-col gap-1">
+          <label className="text-[10px] font-medium text-sap-muted uppercase tracking-wide">Probability %</label>
+          <div className="flex items-center gap-1">
+            <input
+              type="number" min="0" max="100" placeholder="Min"
+              value={filters.probability_min}
+              onChange={e => set('probability_min', e.target.value)}
+              className="w-full border border-sap-border rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-sap-blue"
+            />
+            <span className="text-sap-muted text-[11px]">–</span>
+            <input
+              type="number" min="0" max="100" placeholder="Max"
+              value={filters.probability_max}
+              onChange={e => set('probability_max', e.target.value)}
+              className="w-full border border-sap-border rounded-lg px-2 py-1.5 text-[13px] focus:outline-none focus:border-sap-blue"
+            />
+          </div>
+        </div>
+
+        <SearchMultiSelect label="IAE"              selected={filters.iaes}             options={opts.iaes             ?? []} onChange={v => set('iaes', v)} />
+        <SearchMultiSelect label="SPEC CX"          selected={filters.spec_cxs}         options={opts.spec_cxs         ?? []} onChange={v => set('spec_cxs', v)} />
+        <SearchMultiSelect label="SPEC HXM"         selected={filters.spec_hxms}        options={opts.spec_hxms        ?? []} onChange={v => set('spec_hxms', v)} />
+        <SearchMultiSelect label="SPEC Procurement" selected={filters.spec_procurements} options={opts.spec_procurements ?? []} onChange={v => set('spec_procurements', v)} />
+        <SearchMultiSelect label="SPEC DSC"         selected={filters.spec_dscs}        options={opts.spec_dscs        ?? []} onChange={v => set('spec_dscs', v)} />
+        <SearchMultiSelect label="SPEC BTP"         selected={filters.spec_btps}        options={opts.spec_btps        ?? []} onChange={v => set('spec_btps', v)} />
+        <SearchMultiSelect label="SPEC BDC"         selected={filters.spec_bdcs}        options={opts.spec_bdcs        ?? []} onChange={v => set('spec_bdcs', v)} />
+        <SearchMultiSelect label="SPEC FIN"         selected={filters.spec_fins}        options={opts.spec_fins        ?? []} onChange={v => set('spec_fins', v)} />
+        <SearchMultiSelect label="SPEC PRO"         selected={filters.spec_pros}        options={opts.spec_pros        ?? []} onChange={v => set('spec_pros', v)} />
 
         {hasAny && (
           <div className="flex flex-col justify-end">

@@ -194,7 +194,7 @@ export function LoBsTeamPage() {
               <tr>
                 <th className={thCls} rowSpan={2}>Sol. Advisor</th>
                 {DISP_QTRS.map(q=>(
-                  <th key={q} className={`${thCls} text-center`} colSpan={5} style={{borderLeft:'2px solid #e1e2e6'}}>{q}</th>
+                  <th key={q} className={`${thCls} text-center`} colSpan={3} style={{borderLeft:'2px solid #e1e2e6'}}>{q}</th>
                 ))}
                 <th className={`${thCls} text-center`} colSpan={2} style={{borderLeft:'2px solid #e1e2e6'}}>Total</th>
               </tr>
@@ -408,7 +408,8 @@ export function LoBsTeamPage() {
       {/* ── Deals drill-down panel ── */}
       {selectedSA && (() => {
         const InlineDeals = () => {
-          const { currency: cur, fxRate: rate } = useAuth()
+          const { currency: cur, fxRate: rate, user } = useAuth()
+          const canExport = ['admin', 'manager'].includes(user?.role)
           const [dealsData, setDealsData] = React.useState([])
           const [dealsLoading, setDealsLoading] = React.useState(true)
           React.useEffect(() => {
@@ -479,7 +480,7 @@ export function LoBsTeamPage() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={exportCsv} className="flex items-center gap-1.5 text-xs font-semibold border border-sap-border rounded-lg px-3 py-1.5 hover:bg-sap-bg transition bg-white">
+                  <button onClick={exportCsv} disabled={!canExport} className={`flex items-center gap-1.5 text-xs font-semibold border border-sap-border rounded-lg px-3 py-1.5 transition bg-white ${canExport ? 'hover:bg-sap-bg' : 'opacity-0 pointer-events-none'}`}>
                     ⬇ Export Excel
                   </button>
                   <button onClick={() => setSelectedSA(null)} className="flex items-center gap-1 text-xs font-semibold border border-sap-border rounded-lg px-3 py-1.5 hover:bg-sap-bg transition bg-white text-sap-muted">

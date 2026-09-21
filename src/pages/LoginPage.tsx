@@ -85,17 +85,14 @@ export function LoginPage() {
     <div className="min-h-screen bg-sap-bg flex flex-col">
       {/* Shell */}
       <div className="bg-sap-blue text-white flex items-center gap-3 px-6 h-12 shadow-sm">
-        <div className="bg-white text-sap-blue text-[11px] font-black px-1.5 py-0.5 rounded">SAP</div>
-        <span className="font-bold text-[15px] pr-4 border-r border-white/25">Digital Hub SA Main App</span>
-        <span className="text-[13px] opacity-85">LAC Solution Advisor Manager</span>
+        <img src="/dh-logo.png" alt="Digital Hub Latin America" className="h-7 w-auto brightness-0 invert" />
+        <span className="text-[13px] opacity-85 border-l border-white/25 pl-4">LAC Solution Advisor Manager</span>
       </div>
 
       {/* Card */}
       <div className="flex-1 flex items-center justify-center">
         <div className="card p-10 w-full max-w-sm text-center">
-          <div className="bg-sap-blue rounded-[10px] w-12 h-12 flex items-center justify-center mx-auto mb-4">
-            <span className="text-white font-black text-sm">SAP</span>
-          </div>
+          <img src="/dh-logo.png" alt="Digital Hub Latin America" className="h-16 w-auto mx-auto mb-5" />
           <h2 className="text-xl font-bold text-sap-text mb-1">Sign in</h2>
           <p className="text-[13px] text-sap-muted mb-6">Digital Hub Solution Advisor Main App</p>
 

@@ -322,7 +322,7 @@ function CommentsTab() {
     <div>
       <div className="card p-3 mb-4 flex items-center gap-3">
         <Search size={14} className="text-sap-muted flex-shrink-0" />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search Req ID / Opp ID / Account…"
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search any field…"
           className="flex-1 text-sm focus:outline-none bg-transparent" />
       </div>
       <p className="text-xs text-sap-subtle mb-2">{reqs.length.toLocaleString()} requests (max 100)</p>
@@ -437,6 +437,8 @@ function ExplorerTab() {
     sub_statuses: [] as string[],
     action_takens: [] as string[],
     lob_teams: [] as string[],
+    engagement_statuses: [] as string[],
+    solutions: [] as string[],
     search: '',
     create_date_from: '',
     create_date_to: '',
@@ -463,6 +465,8 @@ function ExplorerTab() {
   if (mFilters.sub_statuses.length)   params.sub_statuses   = mFilters.sub_statuses
   if (mFilters.action_takens.length)  params.action_takens  = mFilters.action_takens
   if (mFilters.lob_teams.length)      params.lob_teams      = mFilters.lob_teams
+  if (mFilters.engagement_statuses.length) params.engagement_statuses = mFilters.engagement_statuses
+  if (mFilters.solutions.length)           params.solutions            = mFilters.solutions
   if (mFilters.search)                params.search         = mFilters.search
   if (mFilters.create_date_from)      params.create_date_from = mFilters.create_date_from
   if (mFilters.create_date_to)        params.create_date_to   = mFilters.create_date_to
@@ -566,6 +570,7 @@ function ExplorerTab() {
     { field: 'req_task_owner',      headerName: 'Task Owner',    width: 150 },
     { field: 'req_task_owner_role', headerName: 'Task Owner Role', width: 140 },
     { field: 'req_role_area',       headerName: 'Role Area',     width: 130 },
+    { field: 'req_solution',        headerName: 'Solution',      width: 160 },
     { field: 'req_create_date',     headerName: 'Created',       width: 115 },
     { field: 'req_last_action_date', headerName: 'Last Action',  width: 115 },
     { field: 'req_task',            headerName: 'Task',          width: 140 },
@@ -577,12 +582,16 @@ function ExplorerTab() {
     <div>
       {/* ── Filters ─── */}
       <div className="card p-4 mb-3 space-y-3">
-        <div className="grid grid-cols-5 gap-3">
-          <MultiSelect label="Status Main"  selected={mFilters.statuses}       options={fOpts.statuses      ?? []} onChange={v => setF('statuses', v)} />
-          <MultiSelect label="Sub-Status"   selected={mFilters.sub_statuses}   options={fOpts.sub_statuses  ?? []} onChange={v => setF('sub_statuses', v)} />
-          <MultiSelect label="Req Type"     selected={mFilters.req_types}      options={fOpts.req_types     ?? []} onChange={v => setF('req_types', v)} />
-          <MultiSelect label="Role Area"    selected={mFilters.role_areas}     options={fOpts.role_areas    ?? []} onChange={v => setF('role_areas', v)} />
-          <MultiSelect label="LoB Team"     selected={mFilters.lob_teams}      options={fOpts.lob_teams     ?? []} onChange={v => setF('lob_teams', v)} />
+        <div className="grid grid-cols-6 gap-3">
+          <MultiSelect label="Status Main"  selected={mFilters.statuses}            options={fOpts.statuses             ?? []} onChange={v => setF('statuses', v)} />
+          <MultiSelect label="Sub-Status"   selected={mFilters.sub_statuses}        options={fOpts.sub_statuses         ?? []} onChange={v => setF('sub_statuses', v)} />
+          <MultiSelect label="Req Type"     selected={mFilters.req_types}           options={fOpts.req_types            ?? []} onChange={v => setF('req_types', v)} />
+          <MultiSelect label="Role Area"    selected={mFilters.role_areas}          options={fOpts.role_areas           ?? []} onChange={v => setF('role_areas', v)} />
+          <MultiSelect label="Solution"     selected={mFilters.solutions}           options={fOpts.solutions            ?? []} onChange={v => setF('solutions', v)} />
+          <MultiSelect label="LoB Team"     selected={mFilters.lob_teams}           options={fOpts.lob_teams            ?? []} onChange={v => setF('lob_teams', v)} />
+        </div>
+        <div className="grid grid-cols-6 gap-3">
+          <MultiSelect label="Engagement"   selected={mFilters.engagement_statuses} options={fOpts.engagement_statuses  ?? []} onChange={v => setF('engagement_statuses', v)} />
         </div>
         <div className="grid grid-cols-5 gap-3">
           <SearchMultiSelect label="Requestor"  selected={mFilters.requestors}  options={fOpts.requestors  ?? []} onChange={v => setF('requestors', v)} />
@@ -620,7 +629,7 @@ function ExplorerTab() {
           </div>
         </div>
         {hasFilters && (
-          <button onClick={() => setMFilters({ statuses:[], req_types:[], role_areas:[], requestors:[], resources:[], profit_centers:[], task_owners:[], processors:[], sub_statuses:[], action_takens:[], lob_teams:[], search:'', create_date_from:'', create_date_to:'', last_action_from:'', last_action_to:'' })}
+          <button onClick={() => setMFilters({ statuses:[], req_types:[], role_areas:[], requestors:[], resources:[], profit_centers:[], task_owners:[], processors:[], sub_statuses:[], action_takens:[], lob_teams:[], engagement_statuses:[], solutions:[], search:'', create_date_from:'', create_date_to:'', last_action_from:'', last_action_to:'' })}
             className="text-[11px] text-sap-error hover:underline">
             Clear all filters
           </button>

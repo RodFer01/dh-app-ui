@@ -363,6 +363,9 @@ function EssSendModal({ campaign, onClose }) {
   const [fromEmail, setFromEmail] = useState('')
   const [sending, setSending] = useState(false)
   const [sendResults, setSendResults] = useState(null)
+  const [testEmail, setTestEmail] = useState('')
+  const [sendingTest, setSendingTest] = useState(false)
+  const [testResult, setTestResult] = useState(null)
   const [editingEmail, setEditingEmail] = useState({})  // {prospect_id: value}
   const [savingEmail, setSavingEmail] = useState({})
 
@@ -458,6 +461,25 @@ function EssSendModal({ campaign, onClose }) {
       setSendResults([{ email: '—', status: 'failed', error: e?.response?.data?.detail || 'Erro no envio.' }])
     } finally {
       setSending(false)
+    }
+  }
+
+  const handleSendTest = async () => {
+    if (!testEmail.trim() || !templateId.trim() || !subject.trim() || !fromEmail.trim()) return
+    setSendingTest(true); setTestResult(null)
+    try {
+      await api.post(`/api/ess/campaigns/${campaign.id}/send-test`, {
+        template_id: templateId.trim(),
+        template_name: templateName.trim() || null,
+        subject,
+        from_email: fromEmail,
+        test_email: testEmail.trim(),
+      })
+      setTestResult({ ok: true })
+    } catch (e) {
+      setTestResult({ ok: false, error: e?.response?.data?.detail || 'Erro no envio.' })
+    } finally {
+      setSendingTest(false)
     }
   }
 
@@ -628,6 +650,33 @@ function EssSendModal({ campaign, onClose }) {
                     onChange={e => setFromEmail(e.target.value)}
                   />
                 </div>
+              </div>
+
+              {/* Test email */}
+              <div className="border border-sap-border rounded-lg p-3 flex flex-col gap-2">
+                <div className={labelCls}>Enviar email de teste</div>
+                <div className="flex gap-2 items-start">
+                  <input
+                    className={`${inputCls} flex-1`}
+                    placeholder="email@sap.com"
+                    value={testEmail}
+                    onChange={e => { setTestEmail(e.target.value); setTestResult(null) }}
+                  />
+                  <button
+                    onClick={handleSendTest}
+                    disabled={sendingTest || !testEmail.trim() || !templateId.trim() || !subject.trim() || !fromEmail.trim() || !connStatus?.connected}
+                    className="px-4 py-2 border border-sap-border text-sap-text text-[13px] rounded-lg hover:bg-sap-bg disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+                  >
+                    {sendingTest ? 'Enviando...' : 'Enviar teste'}
+                  </button>
+                </div>
+                {testResult && (
+                  <div className={`text-[12px] flex items-center gap-1.5 ${testResult.ok ? 'text-green-600' : 'text-red-500'}`}>
+                    {testResult.ok
+                      ? <><CheckCircle size={12} /> Teste enviado para {testEmail} — assunto prefixado com [TESTE]</>
+                      : <>Falhou: {testResult.error}</>}
+                  </div>
+                )}
               </div>
 
               {/* Contacts table */}

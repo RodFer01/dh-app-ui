@@ -44,6 +44,7 @@ api.interceptors.response.use(
         || url.includes('/draft/')
         || url.includes('/api/outlook/')
         || url.includes('/api/calendar/')
+        || url.includes('/api/ess/')
       if (!isOutlookEndpoint) {
         localStorage.removeItem('dh_token')
         localStorage.removeItem('dh_user')

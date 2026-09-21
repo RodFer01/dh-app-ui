@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
-import { Plus, Pencil, Trash2, Users, X, Mail, CheckCircle, Clock, Zap, Copy, ChevronDown, ChevronUp } from 'lucide-react'
+import { Plus, Pencil, Trash2, Users, X, Mail, CheckCircle, Clock, Zap, Copy, ChevronDown, ChevronUp, Key } from 'lucide-react'
 
 const STATUS_OPTS = [
   { value: 'active',  label: 'Ativa' },
@@ -102,9 +102,8 @@ function CampaignModal({ campaign, onClose }) {
         const r = await api.post('/api/campaigns', payload)
         campaignId = r.data.id
       }
-      if (campaignId && (sparkSelIds.length > 0 || isEdit)) {
+      if (campaignId) {
         await api.patch(`/api/campaigns/${campaignId}/sessions`, { session_ids: sparkSelIds })
-          .catch(() => {})
       }
       await qc.invalidateQueries({ queryKey: ['campaigns'] })
       onClose()
@@ -368,6 +367,8 @@ function EssSendModal({ campaign, onClose }) {
   const [testResult, setTestResult] = useState(null)
   const [editingEmail, setEditingEmail] = useState({})  // {prospect_id: value}
   const [savingEmail, setSavingEmail] = useState({})
+  const [showSecret, setShowSecret] = useState(false)
+  const [generatingSecret, setGeneratingSecret] = useState(false)
 
   const { data: connStatus, refetch: refetchStatus } = useQuery({
     queryKey: ['ess-status'],
@@ -429,6 +430,23 @@ function EssSendModal({ campaign, onClose }) {
   const handleDisconnect = async () => {
     await api.delete('/api/ess/cookie')
     refetchStatus()
+  }
+
+  const { data: extSecretData, refetch: refetchExtSecret } = useQuery({
+    queryKey: ['ess-extension-secret'],
+    queryFn: () => api.get('/api/ess/extension-secret').then(r => r.data),
+    enabled: !!connStatus?.connected,
+  })
+
+  const handleGenerateSecret = async () => {
+    setGeneratingSecret(true)
+    try {
+      await api.post('/api/ess/extension-secret/generate')
+      refetchExtSecret()
+      setShowSecret(true)
+    } finally {
+      setGeneratingSecret(false)
+    }
   }
 
   const handleSaveEmail = async (prospectId) => {
@@ -571,6 +589,64 @@ function EssSendModal({ campaign, onClose }) {
             </div>
           )}
 
+          {/* Extension auto-renewal */}
+          {connStatus?.connected && (
+            <div className="bg-sap-bg border border-sap-border rounded-lg p-4 flex flex-col gap-2 text-[13px]">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-sap-text flex items-center gap-1.5">
+                  <Key size={13} className="text-sap-blue" />
+                  Renovação automática (extensão Chrome)
+                </span>
+                {extSecretData?.secret ? (
+                  <span className="text-[11px] text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded">Ativa</span>
+                ) : (
+                  <span className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded">Não configurada</span>
+                )}
+              </div>
+              {!extSecretData?.secret && (
+                <div className="text-[12px] text-sap-muted">
+                  Gere um secret e configure a extensão Chrome para que o cookie ESS seja renovado automaticamente toda vez que você acessa ess.int.sap.
+                </div>
+              )}
+              <div className="flex gap-2 items-center">
+                {extSecretData?.secret && (
+                  <>
+                    <input
+                      type={showSecret ? 'text' : 'password'}
+                      readOnly
+                      value={extSecretData.secret}
+                      className="flex-1 font-mono text-[11px] px-2 py-1.5 border border-sap-border rounded bg-white"
+                    />
+                    <button
+                      onClick={() => navigator.clipboard.writeText(extSecretData.secret)}
+                      className="text-[12px] text-sap-blue hover:underline whitespace-nowrap"
+                    >
+                      Copiar
+                    </button>
+                    <button
+                      onClick={() => setShowSecret(s => !s)}
+                      className="text-[12px] text-sap-muted hover:text-sap-text whitespace-nowrap"
+                    >
+                      {showSecret ? 'Ocultar' : 'Ver'}
+                    </button>
+                  </>
+                )}
+                <button
+                  onClick={handleGenerateSecret}
+                  disabled={generatingSecret}
+                  className="px-3 py-1.5 bg-sap-blue text-white rounded text-[12px] font-semibold disabled:opacity-50 whitespace-nowrap"
+                >
+                  {generatingSecret ? '...' : extSecretData?.secret ? 'Regenerar' : 'Gerar secret'}
+                </button>
+              </div>
+              {extSecretData?.secret && (
+                <div className="text-[11px] text-sap-muted">
+                  Cole este secret na extensão Chrome junto com a URL da API. Extensão: <code className="font-mono bg-white border border-sap-border px-1 rounded">projects/dh-extension/</code>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* SEND TAB */}
           {tab === 'send' && (
             <>
@@ -665,11 +741,21 @@ function EssSendModal({ campaign, onClose }) {
                   <button
                     onClick={handleSendTest}
                     disabled={sendingTest || !testEmail.trim() || !templateId.trim() || !subject.trim() || !fromEmail.trim() || !connStatus?.connected}
-                    className="px-4 py-2 border border-sap-border text-sap-text text-[13px] rounded-lg hover:bg-sap-bg disabled:opacity-50 whitespace-nowrap flex-shrink-0"
+                    title={
+                      !subject.trim() ? 'Preencha o campo Assunto' :
+                      !fromEmail.trim() ? 'Preencha o campo De (seu email SAP)' :
+                      !connStatus?.connected ? 'ESS não conectado' : ''
+                    }
+                    className="px-4 py-2 border border-sap-border text-sap-text text-[13px] rounded-lg hover:bg-sap-bg disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
                   >
                     {sendingTest ? 'Enviando...' : 'Enviar teste'}
                   </button>
                 </div>
+                {(!subject.trim() || !fromEmail.trim()) && testEmail.trim() && (
+                  <div className="text-[11px] text-amber-600">
+                    Preencha {[!subject.trim() && 'Assunto', !fromEmail.trim() && 'De (seu email SAP)'].filter(Boolean).join(' e ')} antes de enviar o teste.
+                  </div>
+                )}
                 {testResult && (
                   <div className={`text-[12px] flex items-center gap-1.5 ${testResult.ok ? 'text-green-600' : 'text-red-500'}`}>
                     {testResult.ok

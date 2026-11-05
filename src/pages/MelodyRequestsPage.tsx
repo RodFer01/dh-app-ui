@@ -544,6 +544,63 @@ function ExplorerTab() {
     onSuccess: () => { setEditId(null); qc.invalidateQueries({ queryKey: ['mr-comments', activeId] }) },
   })
 
+  // ── Sync to Pipeline ─────────────────────────────────────────────────────────
+  const SYNC_ENG_OPTIONS = ['','Assigned','Waiting Definition','Return To','No Engagement']
+  const [syncForm, setSyncForm] = useState({ melody_engagement: '', pre_allocated_dsa: '', melody_comments: '' })
+  const [syncExpanded, setSyncExpanded] = useState(false)
+
+  useEffect(() => {
+    if (activeReq) {
+      setSyncForm({
+        melody_engagement: (activeReq.engagement_status as string) || '',
+        pre_allocated_dsa: (activeReq.pre_allocated as string && activeReq.pre_allocated !== true && activeReq.pre_allocated !== 'true')
+          ? (activeReq.pre_allocated as string)
+          : '',
+        melody_comments: '',
+      })
+      setSyncExpanded(false)
+    }
+  }, [activeReq?.req_id_sub])
+
+  const { data: currentNote = null } = useQuery({
+    queryKey: ['notes-for-sync', activeReq?.opportunity_id],
+    queryFn: () => api.get(`/api/notes/${activeReq?.opportunity_id}`).then(r => r.data).catch(() => null),
+    enabled: !!activeReq?.opportunity_id && syncExpanded,
+  })
+
+  const syncMut = useMutation({
+    mutationFn: (merged: object) => api.put(`/api/notes/${activeReq?.opportunity_id}`, merged),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notes', activeReq?.opportunity_id] })
+      qc.invalidateQueries({ queryKey: ['notes-history', activeReq?.opportunity_id] })
+      qc.invalidateQueries({ queryKey: ['notes-for-sync', activeReq?.opportunity_id] })
+    },
+  })
+
+  function handleSync() {
+    const base = currentNote || {}
+    const merged = {
+      stage: base.stage || '',
+      risk: base.risk || '',
+      next_step: base.next_step || '',
+      next_step_date: base.next_step_date || '',
+      blockers: base.blockers || '',
+      notes: base.notes || '',
+      deal_qual_status: base.deal_qual_status || '',
+      presales_status_override: base.presales_status_override || '',
+      presales_comments: base.presales_comments || '',
+      next_actions: base.next_actions || '',
+      next_actions_date: base.next_actions_date || '',
+      digital_asset: base.digital_asset || '',
+      todo_status: base.todo_status || '',
+      todo_completion_comments: base.todo_completion_comments || '',
+      melody_engagement: syncForm.melody_engagement,
+      pre_allocated_dsa: syncForm.pre_allocated_dsa,
+      melody_comments: syncForm.melody_comments,
+    }
+    syncMut.mutate(merged)
+  }
+
   // ── Table cols ──────────────────────────────────────────────────────────────
   const cols: ColDef[] = [
     { field: 'req_id_sub',          headerName: 'Req ID Sub',    width: 130 },
@@ -840,6 +897,53 @@ function ExplorerTab() {
                   <Check size={10} /> Add
                 </button>
               </div>
+
+              {/* ── Sync to Opportunity Pipeline ─── */}
+              {activeReq?.opportunity_id && (
+                <div className="mt-3 border-t border-sap-border pt-3">
+                  <button
+                    onClick={() => setSyncExpanded(e => !e)}
+                    className="flex items-center gap-1.5 text-[11px] font-semibold text-sap-blue hover:underline w-full text-left">
+                    🔗 Sync to Opportunity Pipeline
+                    <span className="text-sap-muted font-normal ml-auto">{syncExpanded ? '▲' : '▼'}</span>
+                  </button>
+                  {syncExpanded && (
+                    <div className="mt-2 space-y-2 bg-sap-bg rounded-lg p-3">
+                      <p className="text-[10px] text-sap-muted">Opp: <span className="font-semibold text-sap-text">{activeReq.opportunity_id as string}</span></p>
+                      <div>
+                        <label className="text-[10px] font-medium text-sap-muted uppercase tracking-wide block mb-1">Melody Engagement</label>
+                        <select value={syncForm.melody_engagement}
+                          onChange={e => setSyncForm(f => ({ ...f, melody_engagement: e.target.value }))}
+                          className="w-full border border-sap-border rounded-lg px-2 py-1.5 text-[12px] focus:outline-none focus:border-sap-blue">
+                          {SYNC_ENG_OPTIONS.map(o => <option key={o} value={o}>{o || '—'}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-sap-muted uppercase tracking-wide block mb-1">Pre-Allocated DSA</label>
+                        <input type="text" value={syncForm.pre_allocated_dsa}
+                          onChange={e => setSyncForm(f => ({ ...f, pre_allocated_dsa: e.target.value }))}
+                          placeholder="DSA name…"
+                          className="w-full border border-sap-border rounded-lg px-2 py-1.5 text-[12px] focus:outline-none focus:border-sap-blue" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-medium text-sap-muted uppercase tracking-wide block mb-1">Melody Comments</label>
+                        <textarea value={syncForm.melody_comments}
+                          onChange={e => setSyncForm(f => ({ ...f, melody_comments: e.target.value }))}
+                          rows={2} placeholder="Context from this Melody request…"
+                          className="w-full border border-sap-border rounded-lg px-2 py-1.5 text-[12px] focus:outline-none focus:border-sap-blue resize-none" />
+                      </div>
+                      <button
+                        onClick={handleSync}
+                        disabled={syncMut.isPending}
+                        className="w-full bg-sap-blue hover:bg-sap-blue-d text-white font-semibold py-1.5 rounded-lg transition disabled:opacity-60 text-[12px]">
+                        {syncMut.isPending ? 'Saving…' : '🔗 Save to Pipeline'}
+                      </button>
+                      {syncMut.isSuccess && <p className="text-sap-success text-[11px] text-center">✓ Synced to pipeline</p>}
+                      {syncMut.isError && <p className="text-sap-error text-[11px] text-center">⚠ Error saving</p>}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}

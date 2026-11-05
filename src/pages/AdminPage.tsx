@@ -5,16 +5,18 @@ import api from '../lib/api'
 import { useAuth } from '../context/AuthContext'
 
 const ALL_MODULES = [
-  'pipeline','melody','erp_team','lobs_team','melody_requests',
-  'etl','scheduler','yoy','qualification','lac_results','opportunities',
-  'ae_analysis','feedback','actions','team_agenda','idea_zone','campaigns','bookings','admin',
+  'pipeline','pipeline_progression','partner_analysis','melody','erp_team','lobs_team','melody_requests',
+  'etl','yoy','qualification','lac_results','opportunities',
+  'ae_analysis','feedback','actions','team_agenda','todo_activities','idea_zone','campaigns','bookings','admin',
 ]
 const MODULE_LABELS: Record<string, string> = {
-  pipeline: 'ADRM Pipeline', melody: 'Melody Analysis', erp_team: 'ERP Team',
+  pipeline: 'ADRM Pipeline', pipeline_progression: 'Pipeline Progression', partner_analysis: 'Partner Analysis',
+  melody: 'Melody Analysis', erp_team: 'ERP Team',
   lobs_team: 'LoBs Team', melody_requests: 'Melody Requests', etl: 'Update Data',
-  scheduler: 'Pipeline Scheduler', yoy: '2025 vs 2026', qualification: 'Deal Qualification',
+  yoy: '2025 vs 2026', qualification: 'Deal Qualification',
   lac_results: 'LAC Results', opportunities: 'Opportunity List',
   feedback: '1:1 Feedback', actions: 'Actions', team_agenda: 'Team Agenda',
+  todo_activities: 'To Do Activities',
   idea_zone: 'IdeaZone', ae_analysis: 'AE Territory Analysis', campaigns: 'Campanhas',
   bookings: 'Bookings', admin: 'Administration',
 }

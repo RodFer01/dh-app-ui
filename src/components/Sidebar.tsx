@@ -5,13 +5,15 @@ import { cn } from '../lib/utils'
 import { useAuth } from '../context/AuthContext'
 
 function Picto({ src, alt }: { src: string; alt: string }) {
-  return <img src={src} alt={alt} className="w-4 h-4 flex-shrink-0 opacity-70 group-hover:opacity-100 transition-opacity" />
+  return <img src={src} alt={alt} className="w-4 h-4 flex-shrink-0 opacity-60 group-hover:opacity-100 transition-opacity invert" />
 }
 
 const ONLINE_APPS = [
   { to: '/opportunities',   picto: '/icons/funnel.svg',        label: 'Opportunity List',   module: 'opportunities' },
   { to: '/ae-analysis',     picto: '/icons/pipeline.svg',      label: 'AE Territory',       module: 'ae_analysis' },
-  { to: '/pipeline',        picto: '/icons/pipeline.svg',      label: 'ADRM Pipeline',      module: 'pipeline' },
+  { to: '/pipeline',              picto: '/icons/pipeline.svg',      label: 'ADRM Pipeline',      module: 'pipeline' },
+  { to: '/pipeline-progression', picto: '/icons/pipeline.svg',      label: 'Pipeline Progression', module: 'pipeline' },
+  { to: '/partner-analysis',     picto: '/icons/pipeline.svg',      label: 'Partner Analysis',     module: 'pipeline' },
   { to: '/melody',          picto: '/icons/melody.svg',        label: 'Melody Analysis',    module: 'melody' },
   { to: '/qualification',   picto: '/icons/qualification.svg', label: 'Deal Qualification', module: 'qualification' },
   { to: '/lac-results',     picto: '/icons/results.svg',       label: 'LAC Results',        module: 'lac_results' },
@@ -19,12 +21,12 @@ const ONLINE_APPS = [
   { to: '/lobs-team',       picto: '/icons/lobs.svg',          label: 'LoBs Team',          module: 'lobs_team' },
   { to: '/melody-requests', picto: '/icons/requests.svg',      label: 'Melody Requests',    module: 'melody_requests' },
   { to: '/yoy',             picto: '/icons/yoy.svg',           label: '2025 vs 2026',       module: 'yoy' },
-  { to: '/scheduler',       picto: '/icons/scheduler.svg',     label: 'Pipeline Scheduler', module: 'scheduler' },
   { to: '/campaigns',       picto: '/icons/requests.svg',      label: 'Campanhas',          module: 'campaigns' },
   { to: '/bookings',        picto: '/icons/results.svg',       label: 'Bookings',           module: 'bookings' },
 ]
 
 const LOCAL_APPS = [
+  { to: '/todo-activities', picto: '/icons/scheduler.svg', label: 'To Do Activities', module: 'todo_activities' },
   { to: '/team-agenda',     picto: '/icons/scheduler.svg', label: 'Team Agenda',    module: 'team_agenda' },
   { to: '/actions',         picto: '/icons/requests.svg',  label: 'Actions',        module: 'actions' },
   { to: '/outlook-flagged', picto: '/icons/requests.svg',  label: 'Outlook Flagged',module: null },
@@ -48,8 +50,8 @@ function NavItem({ to, picto, label, collapsed }: { to: string; picto: string; l
         'group flex items-center gap-2.5 py-2 text-[13px] font-medium rounded-md my-0.5 transition-colors',
         collapsed ? 'mx-1 px-3 justify-center' : 'mx-2 px-4',
         isActive
-          ? 'bg-sap-blue-l text-sap-blue border-l-[3px] border-sap-blue ' + (collapsed ? 'pl-[9px]' : 'pl-[13px]')
-          : 'text-sap-muted hover:bg-sap-blue-l hover:text-sap-blue'
+          ? 'bg-white/20 text-white border-l-[3px] border-white ' + (collapsed ? 'pl-[9px]' : 'pl-[13px]')
+          : 'text-white/70 hover:bg-white/10 hover:text-white'
       )}
     >
       <Picto src={picto} alt={label} />
@@ -81,7 +83,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'flex-shrink-0 bg-white border-r border-sap-border flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-200 relative',
+        'flex-shrink-0 bg-[#003270] border-r border-[#002050] flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-200 relative',
         collapsed ? 'w-[52px]' : 'w-56'
       )}
     >
@@ -89,7 +91,7 @@ export function Sidebar() {
         onClick={() => setCollapsed(c => !c)}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={cn(
-          'absolute top-2 z-10 flex items-center justify-center w-5 h-5 rounded-full bg-white border border-sap-border text-sap-muted hover:text-sap-blue hover:border-sap-blue transition-colors shadow-sm',
+          'absolute top-2 z-10 flex items-center justify-center w-5 h-5 rounded-full bg-[#003270] border border-white/30 text-white/60 hover:text-white hover:border-white transition-colors shadow-sm',
           collapsed ? 'right-1' : 'right-2'
         )}
       >
@@ -104,16 +106,16 @@ export function Sidebar() {
         ))}
 
         {/* Online Apps folder */}
-        <div className={cn('border-t border-sap-border my-1', collapsed ? 'mx-1' : 'mx-4')} />
+        <div className={cn('border-t border-white/20 my-1', collapsed ? 'mx-1' : 'mx-4')} />
 
         {collapsed ? (
           <div className="mx-1 px-3 py-2 flex justify-center">
-            <Globe size={16} className="text-sap-muted" />
+            <Globe size={16} className="text-white/40" />
           </div>
         ) : (
           <button
             onClick={() => setOnlineOpen(o => !o)}
-            className="w-full flex items-center gap-2 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-sap-muted hover:text-sap-blue transition-colors"
+            className="w-full flex items-center gap-2 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/50 hover:text-white/80 transition-colors"
           >
             <Globe size={12} />
             <span className="flex-1 text-left">Online Apps</span>
@@ -126,9 +128,9 @@ export function Sidebar() {
         ))}
 
         {/* Local Apps */}
-        <div className={cn('border-t border-sap-border my-1', collapsed ? 'mx-1' : 'mx-4')} />
+        <div className={cn('border-t border-white/20 my-1', collapsed ? 'mx-1' : 'mx-4')} />
         {!collapsed && (
-          <div className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-sap-muted">
+          <div className="px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-white/50">
             Local
           </div>
         )}
@@ -139,7 +141,7 @@ export function Sidebar() {
         {/* Admin */}
         {user?.role === 'admin' && (
           <>
-            <div className={cn('border-t border-sap-border my-1', collapsed ? 'mx-1' : 'mx-4')} />
+            <div className={cn('border-t border-white/20 my-1', collapsed ? 'mx-1' : 'mx-4')} />
             <NavLink
               to="/admin"
               title={collapsed ? 'Administration' : undefined}
@@ -147,8 +149,8 @@ export function Sidebar() {
                 'group flex items-center gap-2.5 py-2 text-[13px] font-medium rounded-md my-0.5 transition-colors',
                 collapsed ? 'mx-1 px-3 justify-center' : 'mx-2 px-4',
                 isActive
-                  ? 'bg-red-50 text-sap-error border-l-[3px] border-sap-error ' + (collapsed ? 'pl-[9px]' : 'pl-[13px]')
-                  : 'text-sap-muted hover:bg-red-50 hover:text-sap-error'
+                  ? 'bg-red-500/20 text-red-300 border-l-[3px] border-red-400 ' + (collapsed ? 'pl-[9px]' : 'pl-[13px]')
+                  : 'text-white/60 hover:bg-red-500/10 hover:text-red-300'
               )}
             >
               <Picto src="/icons/etl.svg" alt="Admin" />

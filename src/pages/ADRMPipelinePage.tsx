@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { KpiCard } from '../components/KpiCard'
 import { SectionLabel } from '../components/SectionLabel'
@@ -21,6 +21,7 @@ import type { ColDef } from 'ag-grid-community'
 import type { EChartsOption } from 'echarts'
 import { Download } from 'lucide-react'
 import { oppIdCol } from '../components/OppIdCol'
+import { OppDetailPanel, BLANK_NOTE_FORM } from '../components/OppDetailPanel'
 
 const FC_COLORS: Record<string,string> = {
   'Committed':'#0070f2','Probable':'#4cb1ff','Upside':'#c4d9f0',
@@ -118,6 +119,9 @@ export function ADRMPipelinePage() {
   const [rangeAgingFilter, setRangeAgingFilter] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState<'pipeline' | 'booked'>('pipeline')
   const [bookedView, setBookedView] = useState<'all' | 'new'>('new')
+  const [selectedOpp, setSelectedOpp] = useState<any>(null)
+  const [noteForm, setNoteForm] = useState(BLANK_NOTE_FORM)
+  const qc = useQueryClient()
 
   const { data: opts = {} } = useQuery({
     queryKey: ['pipeline-filters'],
@@ -183,13 +187,54 @@ export function ADRMPipelinePage() {
     ...(debouncedParams.closing_qtrs  ? { closing_qtrs:     debouncedParams.closing_qtrs }     : {}),
     ...(debouncedParams.regions       ? { regions:          debouncedParams.regions }           : {}),
     ...(debouncedParams.sol_l1s       ? { sol_l1s:          debouncedParams.sol_l1s }           : {}),
-    ...(debouncedParams.engagement_types ? { engagement_types: debouncedParams.engagement_types } : {}),
-    ...(debouncedParams.digital_sas   ? { digital_sas:      debouncedParams.digital_sas }       : {}),
+    // usePipelineFilters emits single-value `engagement_type` / `digital_sa`;
+    // /new-bookings only accepts the list forms, so map them here.
+    ...(debouncedParams.engagement_type ? { engagement_types: [debouncedParams.engagement_type] } : {}),
+    ...(debouncedParams.digital_sa    ? { digital_sas:      [debouncedParams.digital_sa] }      : {}),
   }
   const { data: newBookings = [] as Row[] } = useQuery({
     queryKey: ['pipeline-new-bookings', newBookingsParams],
     queryFn: () => api.get('/api/pipeline/new-bookings', { params: newBookingsParams }).then(r => r.data),
     staleTime: 2 * 60_000,
+  })
+
+  const handleSelectOpp = (row: any) => {
+    setSelectedOpp(row)
+    setNoteForm(BLANK_NOTE_FORM)
+  }
+
+  useQuery({
+    queryKey: ['notes', selectedOpp?.opportunity_id],
+    queryFn: () => api.get(`/api/notes/${selectedOpp.opportunity_id}`).then(r => r.data),
+    enabled: !!selectedOpp?.opportunity_id,
+    onSuccess: (d: any) => {
+      if (d) setNoteForm({
+        deal_qual_status: d.deal_qual_status || '',
+        presales_status_override: d.presales_status_override || '',
+        presales_comments: d.presales_comments || '',
+        next_actions: d.next_actions || '',
+        next_actions_date: d.next_actions_date || '',
+        stage: d.stage || '', risk: d.risk || '',
+        next_step: d.next_step || '', next_step_date: d.next_step_date || '',
+        blockers: d.blockers || '', notes: d.notes || '',
+        digital_asset: d.digital_asset || '',
+        melody_engagement: d.melody_engagement || '',
+        pre_allocated_dsa: d.pre_allocated_dsa || '',
+        melody_comments: d.melody_comments || '',
+        todo_status: d.todo_status || '',
+        todo_completion_comments: d.todo_completion_comments || '',
+        author: d.author || '',
+        updated_at: d.updated_at || '',
+      })
+    },
+  })
+
+  const saveMut = useMutation({
+    mutationFn: (data: any) => api.put(`/api/notes/${selectedOpp.opportunity_id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notes', selectedOpp?.opportunity_id] })
+      qc.invalidateQueries({ queryKey: ['notes-history', selectedOpp?.opportunity_id] })
+    },
   })
 
   const [sdeFilter, setSdeFilter] = useState<string>('all')
@@ -575,11 +620,29 @@ export function ADRMPipelinePage() {
 
           {isLoading
             ? <div className="text-sap-muted text-sm py-8 text-center">Loading…</div>
-            : <DataTable
-                rows={bookedView === 'new' ? newBookings : bookedRows}
-                cols={bookedView === 'new' ? newBookingsCols : bookedCols}
-                height={560}
-              />
+            : <div className={selectedOpp ? 'flex gap-4 items-start' : ''} style={selectedOpp ? { minHeight: 'calc(100vh - 140px)' } : {}}>
+                <div className={selectedOpp ? 'flex-1 min-w-0' : ''}>
+                  <DataTable
+                    rows={bookedView === 'new' ? newBookings : bookedRows}
+                    cols={bookedView === 'new' ? newBookingsCols : bookedCols}
+                    height={selectedOpp ? 640 : 560}
+                    onRowClick={handleSelectOpp}
+                  />
+                </div>
+                {selectedOpp && (
+                  <div className="w-[62%] flex-shrink-0 sticky top-4">
+                    <OppDetailPanel
+                      opp={selectedOpp}
+                      noteForm={noteForm}
+                      setNoteForm={setNoteForm}
+                      saveMut={saveMut}
+                      onClose={() => setSelectedOpp(null)}
+                      currency={currency}
+                      fx={fx}
+                    />
+                  </div>
+                )}
+              </div>
           }
         </div>
       )}
@@ -613,6 +676,16 @@ export function ADRMPipelinePage() {
         <KpiCard label="ACV Excluded"  value={formatAcvK(acvExcl,currency)}    color="red"    sub={`${nExcluded.toLocaleString()} opps`} />
         <KpiCard label="ACV Disc/Lost" value={formatAcvK(acvLost,currency)}    color="grey"   sub={`${nLost.toLocaleString()} opps`} />
       </div>
+
+      {!prevRows.some((r: any) => r.iss_group_text != null) && (
+        <div className="flex items-center gap-3 px-4 py-2.5 mb-3 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-[12px] font-medium">
+          <span className="text-amber-500 text-base">⚠</span>
+          <span>
+            Prior week data not available — all "Prior Week" bars will show zero.
+            To fix: go to <a href="/etl" className="underline font-semibold">Update Data</a> and upload the <b>Pipeline (Last Week)</b> file.
+          </span>
+        </div>
+      )}
 
       <CollapsibleSection title="By Account Segment — current vs prior week">
       <div className="grid grid-cols-2 gap-4">
@@ -1010,7 +1083,24 @@ export function ADRMPipelinePage() {
       </div>
       {isLoading
         ? <div className="text-sap-muted text-sm py-8 text-center">Loading…</div>
-        : <DataTable rows={filteredRows} cols={visibleColDefs} height={520} />
+        : <div className={selectedOpp ? 'flex gap-4 items-start' : ''} style={selectedOpp ? { minHeight: 'calc(100vh - 140px)' } : {}}>
+            <div className={selectedOpp ? 'flex-1 min-w-0' : ''}>
+              <DataTable rows={filteredRows} cols={visibleColDefs} height={selectedOpp ? 600 : 520} onRowClick={handleSelectOpp} />
+            </div>
+            {selectedOpp && (
+              <div className="w-[62%] flex-shrink-0 sticky top-4">
+                <OppDetailPanel
+                  opp={selectedOpp}
+                  noteForm={noteForm}
+                  setNoteForm={setNoteForm}
+                  saveMut={saveMut}
+                  onClose={() => setSelectedOpp(null)}
+                  currency={currency}
+                  fx={fx}
+                />
+              </div>
+            )}
+          </div>
       }
       </div>
       )}{/* end pipeline tab */}

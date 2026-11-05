@@ -10,13 +10,16 @@ interface Props {
   rows: any[]
   cols: any[]
   height?: number
+  autoHeight?: boolean
+  pagination?: boolean
+  pageSize?: number
   onRowClick?: (row: any) => void
   onSelectionChanged?: (selectedRows: any[]) => void
   multiSelect?: boolean
-  checkboxCol?: boolean  // add explicit checkbox column (selection separate from row click)
+  checkboxCol?: boolean
 }
 
-export function DataTable({ rows, cols, height = 480, onRowClick, onSelectionChanged, multiSelect = false, checkboxCol = false }: Props) {
+export function DataTable({ rows, cols, height = 480, autoHeight = false, pagination = false, pageSize = 20, onRowClick, onSelectionChanged, multiSelect = false, checkboxCol = false }: Props) {
   const checkboxColDef = checkboxCol ? [{
     headerCheckboxSelection: true,
     checkboxSelection: true,
@@ -34,7 +37,7 @@ export function DataTable({ rows, cols, height = 480, onRowClick, onSelectionCha
     <div
       className="ag-theme-alpine overflow-hidden"
       style={{
-        height,
+        height: autoHeight ? 'auto' : height,
         width: '100%',
         borderRadius: '0.75rem',
         border: '1px solid #e1e2e6',
@@ -44,6 +47,7 @@ export function DataTable({ rows, cols, height = 480, onRowClick, onSelectionCha
       <AgGridReact
         rowData={rows}
         columnDefs={[...checkboxColDef, ...cols]}
+        domLayout={autoHeight ? 'autoHeight' : 'normal'}
         defaultColDef={{
           sortable: true,
           filter: true,
@@ -61,6 +65,9 @@ export function DataTable({ rows, cols, height = 480, onRowClick, onSelectionCha
             onSelectionChanged(e.api.getSelectedRows())
           }
         }}
+        pagination={pagination}
+        paginationPageSize={pageSize}
+        paginationPageSizeSelector={pagination ? [10, 20, 50] : undefined}
         suppressCellFocus
         animateRows={false}
         theme="legacy"

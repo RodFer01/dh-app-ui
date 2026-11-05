@@ -29,6 +29,9 @@ import { AdminPage }             from './pages/AdminPage'
 import { AEAnalysisPage }        from './pages/AEAnalysisPage'
 import { CampaignsPage }          from './pages/CampaignsPage'
 import { BookingsPage }           from './pages/BookingsPage'
+import PipelineProgressionPage   from './pages/PipelineProgressionPage'
+import PartnerAnalysisPage        from './pages/PartnerAnalysisPage'
+import ToDoActivitiesPage         from './pages/ToDoActivitiesPage'
 import { Component } from 'react'
 
 class ErrorBoundary extends Component {
@@ -77,14 +80,17 @@ function AppLayout() {
               <Route path="/scheduler"       element={<ProtectedRoute module="scheduler"><PipelineSchedulerPage /></ProtectedRoute>} />
               <Route path="/feedback"        element={<ProtectedRoute module="feedback"><FeedbackSessionPage /></ProtectedRoute>} />
               <Route path="/mgr-report"      element={<ProtectedRoute><DHManagerReportPage /></ProtectedRoute>} />
+              <Route path="/todo-activities" element={<ProtectedRoute module="todo_activities"><ToDoActivitiesPage /></ProtectedRoute>} />
               <Route path="/team-agenda"     element={<ProtectedRoute module="team_agenda"><TeamAgendaPage /></ProtectedRoute>} />
               <Route path="/actions"         element={<ProtectedRoute module="actions"><ActionsPage /></ProtectedRoute>} />
               <Route path="/outlook-flagged" element={<ProtectedRoute><OutlookFlaggedPage /></ProtectedRoute>} />
               <Route path="/idea-zone"       element={<ProtectedRoute module="idea_zone"><IdeaZonePage /></ProtectedRoute>} />
               <Route path="/ae-analysis"     element={<ProtectedRoute module="ae_analysis"><AEAnalysisPage /></ProtectedRoute>} />
               <Route path="/campaigns"       element={<ProtectedRoute module="campaigns"><CampaignsPage /></ProtectedRoute>} />
-              <Route path="/bookings"        element={<ProtectedRoute module="bookings"><BookingsPage /></ProtectedRoute>} />
-              <Route path="/admin"           element={<ProtectedRoute module="admin"><AdminPage /></ProtectedRoute>} />
+              <Route path="/bookings"              element={<ProtectedRoute module="bookings"><BookingsPage /></ProtectedRoute>} />
+              <Route path="/pipeline-progression" element={<ProtectedRoute module="pipeline"><PipelineProgressionPage /></ProtectedRoute>} />
+              <Route path="/partner-analysis"     element={<ProtectedRoute module="pipeline"><PartnerAnalysisPage /></ProtectedRoute>} />
+              <Route path="/admin"                element={<ProtectedRoute module="admin"><AdminPage /></ProtectedRoute>} />
               <Route path="*"                element={<Navigate to="/" replace />} />
             </Routes>
           </ErrorBoundary>

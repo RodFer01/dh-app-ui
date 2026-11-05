@@ -114,8 +114,8 @@ export function ShellBar({ subtitle = 'LAC Solution Advisor Manager' }: Props) {
   return (
     <>
       <header className="sticky top-0 z-50 bg-white border-b border-sap-border shadow-sm flex items-center gap-4 px-6 py-2.5">
-        {/* Digital Hub logo */}
-        <img src="/dh-logo.png" alt="Digital Hub Latin America" className="h-9 flex-shrink-0" />
+        {/* SAP logo */}
+        <img src="/sap-logo.png" alt="SAP" className="h-9 flex-shrink-0" />
 
         {/* Divider + subtitle */}
         <div className="pr-4 border-r border-sap-border">

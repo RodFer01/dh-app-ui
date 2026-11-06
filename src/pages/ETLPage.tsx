@@ -81,17 +81,7 @@ export function ETLPage() {
     },
   })
 
-  // Poll active job log while running
   const activeJobData = jobs.find(j => j.id === activeJob) ?? null
-  const isRunning = activeJobData?.status === 'running'
-
-  useEffect(() => {
-    if (!isRunning) return
-    const t = setInterval(() => {
-      qc.invalidateQueries({ queryKey: ['etl-jobs'] })
-    }, 1500)
-    return () => clearInterval(t)
-  }, [isRunning, qc])
 
   // Auto-scroll log to bottom
   useEffect(() => {
@@ -100,20 +90,27 @@ export function ETLPage() {
     }
   }, [activeJobData?.log])
 
+  const [runError, setRunError] = useState<string | null>(null)
+
   const runMut = useMutation({
     mutationFn: async ({ sourceId, files }: { sourceId: string; files?: File[] }) => {
       const form = new FormData()
       if (files?.length) {
         for (const f of files) form.append('files', f)
       }
-      const res = await api.post(`/api/etl/run/${sourceId}`, form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      // Do NOT set Content-Type manually — browser must generate the boundary automatically
+      const res = await api.post(`/api/etl/run/${sourceId}`, form)
       return res.data
     },
     onSuccess: (data) => {
+      setRunError(null)
       setActiveJob(data.job_id)
+      setSelectedFile({})
       qc.invalidateQueries({ queryKey: ['etl-jobs'] })
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.detail ?? err?.message ?? 'Unknown error'
+      setRunError(String(msg))
     },
   })
 
@@ -137,6 +134,15 @@ export function ETLPage() {
 
         {/* ── Left: source cards ─────────────────────────────────────── */}
         <div className="col-span-2 space-y-5">
+
+          {/* Error banner */}
+          {runError && (
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <XCircle size={15} className="mt-0.5 shrink-0" />
+              <div className="flex-1">{runError}</div>
+              <button onClick={() => setRunError(null)} className="text-red-400 hover:text-red-600 transition">✕</button>
+            </div>
+          )}
 
           {/* Full run */}
           {fullRun && (
@@ -228,7 +234,6 @@ export function ETLPage() {
   )
 }
 
-// ── SourceCard ─────────────────────────────────────────────────────────────────
 function SourceCard({
   src, files, multi, onFilesChange, onRun, running, highlight = false,
 }: {
@@ -241,6 +246,8 @@ function SourceCard({
   highlight?: boolean
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
+  const needsFile = src.accept !== null
+  const canRun = !running && (!needsFile || files.length > 0)
 
   return (
     <div className={`border rounded-xl px-4 py-3 flex items-center gap-3 transition ${
@@ -260,6 +267,9 @@ function SourceCard({
             }
           </span>
         )}
+        {needsFile && files.length === 0 && (
+          <span className="text-[11px] text-sap-muted">Select a file to enable Run</span>
+        )}
       </div>
 
       {/* Upload button (only for sources that take a file) */}
@@ -271,6 +281,7 @@ function SourceCard({
             accept={src.accept}
             multiple={multi}
             className="hidden"
+            onClick={e => { (e.target as HTMLInputElement).value = '' }}
             onChange={e => onFilesChange(e.target.files ? Array.from(e.target.files) : [])}
           />
           <button
@@ -285,7 +296,7 @@ function SourceCard({
       {/* Run button */}
       <button
         onClick={onRun}
-        disabled={running}
+        disabled={!canRun}
         className={`flex items-center gap-1.5 text-xs font-semibold rounded-lg px-3 py-1.5 transition ${
           highlight
             ? 'bg-sap-blue text-white hover:bg-sap-blue-d disabled:opacity-50'

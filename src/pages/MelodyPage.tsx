@@ -38,7 +38,7 @@ export function MelodyPage() {
   const [filters, setFilters] = useState({
     date_from: '', date_to: '',
     activity_type: '', status: '', team_area: '', sub_team: '',
-    employee_name: '',
+    employee_name: '', opp_main_sol_l2: '',
   })
   const set = (k: string, v: string) => setFilters(f => ({ ...f, [k]: v }))
 
@@ -155,7 +155,7 @@ export function MelodyPage() {
   const byType    = hbarTop(filteredRows, 'activity_type', 15, '#0070f2')
   const byAdvisor = hbarTop(filteredRows, 'employee_name', 15, '#4cb1ff')
   const byTeam    = hbarTop(filteredRows, 'team_area', 10, '#5d36ff')
-  const bySolL2   = hbarTop(filteredRows, 'solution_l2', 12, '#046c7a')
+  const bySolL2   = hbarTop(filteredRows, 'opp_main_sol_l2', 12, '#046c7a')
 
   function hbarOpt(title: string, labels: string[], values: number[], color: string) {
     return {
@@ -246,6 +246,7 @@ export function MelodyPage() {
           <FilterSelect label="Digital Team" value={filters.team_area} onChange={v => set('team_area', v)} options={opts.team_areas ?? []} />
           <FilterSelect label="Sub-Team" value={filters.sub_team} onChange={v => set('sub_team', v)} options={opts.sub_teams ?? []} />
           <FilterSelect label="Solution Advisor" value={filters.employee_name} onChange={v => set('employee_name', v)} options={opts.employees ?? []} />
+          <FilterSelect label="Opp Solution Area L2" value={filters.opp_main_sol_l2} onChange={v => set('opp_main_sol_l2', v)} options={opts.opp_main_sol_l2s ?? []} />
         </FilterGrid>
       </FilterBar>
 

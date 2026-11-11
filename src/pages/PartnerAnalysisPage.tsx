@@ -62,6 +62,7 @@ export default function PartnerAnalysisPage() {
 
   const [demoDateFrom, setDemoDateFrom] = useState('')
   const [demoDateTo, setDemoDateTo]     = useState('')
+  const [demoOppMainSolL2, setDemoOppMainSolL2] = useState('')
   const [demoOpen, setDemoOpen]         = useState(false)
   const [engagementOpen, setEngagementOpen] = useState(true)
   const [selectedPartner, setSelectedPartner] = useState<string | null>(null)
@@ -73,6 +74,12 @@ export default function PartnerAnalysisPage() {
   const { data: opts = {} } = useQuery({
     queryKey: ['pipeline-filters'],
     queryFn: () => fetch('/api/pipeline/filters'),
+    staleTime: 5 * 60_000,
+  })
+
+  const { data: melodyOpts = {} } = useQuery({
+    queryKey: ['melody-filters'],
+    queryFn: () => fetch('/api/melody/filters'),
     staleTime: 5 * 60_000,
   })
 
@@ -93,7 +100,8 @@ export default function PartnerAnalysisPage() {
     ...debouncedParams,
     ...(demoDateFrom && { date_from: demoDateFrom }),
     ...(demoDateTo   && { date_to: demoDateTo }),
-  }), [debouncedParams, demoDateFrom, demoDateTo])
+    ...(demoOppMainSolL2 && { opp_main_sol_l2: demoOppMainSolL2 }),
+  }), [debouncedParams, demoDateFrom, demoDateTo, demoOppMainSolL2])
 
   const { data: demoRows = [] } = useQuery({
     queryKey: ['partner-demo-activity', demoParams],
@@ -487,10 +495,18 @@ export default function PartnerAnalysisPage() {
               <input type="date" value={demoDateTo} onChange={e => setDemoDateTo(e.target.value)}
                 className="text-sm border rounded px-2 py-1.5" />
             </div>
-            {(demoDateFrom || demoDateTo) && (
-              <button onClick={() => { setDemoDateFrom(''); setDemoDateTo('') }}
+            <div>
+              <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide block mb-1">Opp Solution Area L2</label>
+              <select value={demoOppMainSolL2} onChange={e => setDemoOppMainSolL2(e.target.value)}
+                className="text-sm border rounded px-2 py-1.5 bg-white min-w-[160px]">
+                <option value="">All</option>
+                {(melodyOpts.opp_main_sol_l2s ?? []).map((v: string) => <option key={v} value={v}>{v}</option>)}
+              </select>
+            </div>
+            {(demoDateFrom || demoDateTo || demoOppMainSolL2) && (
+              <button onClick={() => { setDemoDateFrom(''); setDemoDateTo(''); setDemoOppMainSolL2('') }}
                 className="text-xs text-gray-500 hover:text-gray-700 border rounded px-2 py-1.5">
-                Clear dates
+                Clear filters
               </button>
             )}
           </div>

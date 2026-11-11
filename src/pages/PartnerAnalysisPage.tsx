@@ -299,8 +299,8 @@ export default function PartnerAnalysisPage() {
   // ── Chart: Demo Activity by Partner × SA LoB ───────────────────────────────
   const demoChartOption = useMemo<EChartsOption>(() => {
     const partners = [...new Set(demoRows.map(r => r.partner))].slice(0, 12)
-    const lobs     = [...new Set(demoRows.map(r => r.sa_lob))].filter(l => l && l !== 'Unknown')
-    if (demoRows.find(r => r.sa_lob === 'Unknown')) lobs.push('Unknown')
+    const sols     = [...new Set(demoRows.map(r => r.opp_main_sol_l2))].filter(l => l && l !== 'Not Specified')
+    if (demoRows.find(r => r.opp_main_sol_l2 === 'Not Specified')) sols.push('Not Specified')
 
     const lobPalette = ['#0070f2','#e66a2c','#1a7f4b','#a020f0','#c00000','#0080a0','#f0a000','#408060','#808080']
 
@@ -312,15 +312,15 @@ export default function PartnerAnalysisPage() {
           params.filter(p => p.value > 0)
             .map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b> activities`).join('<br/>'),
       },
-      legend: { data: lobs, bottom: 0, textStyle: { fontSize: 10 } },
+      legend: { data: sols, bottom: 0, textStyle: { fontSize: 10 } },
       grid: { left: 8, right: 16, top: 8, bottom: 52, containLabel: true },
       xAxis: { type: 'category', data: partners, axisLabel: { rotate: 35, fontSize: 10, width: 120, overflow: 'truncate' } },
       yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#788fa6' } },
-      series: lobs.map((lob, i) => ({
-        name: lob, type: 'bar', stack: 'total',
+      series: sols.map((sol, i) => ({
+        name: sol, type: 'bar', stack: 'total',
         itemStyle: { color: lobPalette[i % lobPalette.length] },
         data: partners.map(p => {
-          const r = demoRows.find(x => x.partner === p && x.sa_lob === lob)
+          const r = demoRows.find(x => x.partner === p && x.opp_main_sol_l2 === sol)
           return r?.n_activities ?? 0
         }),
         label: { show: false },
@@ -344,24 +344,24 @@ export default function PartnerAnalysisPage() {
   ], [fx, currency])
 
   const demoCols = useMemo(() => [
-    { field: 'partner',          headerName: 'Partner',      flex: 2, minWidth: 180 },
-    { field: 'sa_lob',           headerName: 'SA LoB',       flex: 1, minWidth: 100 },
-    { field: 'n_activities',     headerName: '# Activities', flex: 1, minWidth: 100, sort: 'desc' },
-    { field: 'n_distinct_opps',  headerName: '# Opps',       flex: 1, minWidth: 80 },
-    { field: 'n_distinct_sas',   headerName: '# SAs',        flex: 1, minWidth: 80 },
+    { field: 'partner',          headerName: 'Partner',           flex: 2, minWidth: 180 },
+    { field: 'opp_main_sol_l2',  headerName: 'Opp Solution L2',  flex: 2, minWidth: 160 },
+    { field: 'n_activities',     headerName: '# Activities',      flex: 1, minWidth: 100, sort: 'desc' },
+    { field: 'n_distinct_opps',  headerName: '# Opps',            flex: 1, minWidth: 80 },
+    { field: 'n_distinct_sas',   headerName: '# SAs',             flex: 1, minWidth: 80 },
   ], [])
 
   const detailCols = useMemo(() => [
-    { field: 'activity_date',  headerName: 'Date',        flex: 1, minWidth: 100, valueFormatter: (p: any) => p.value ? String(p.value).slice(0, 10) : '—' },
-    { field: 'account_name',   headerName: 'Account',     flex: 2, minWidth: 160 },
-    { field: 'sa_name',        headerName: 'SA',          flex: 1, minWidth: 130 },
-    { field: 'sa_lob',         headerName: 'LoB',         flex: 1, minWidth: 90 },
-    { field: 'activity_type',  headerName: 'Type',        flex: 1, minWidth: 100 },
-    { field: 'solution_l2',    headerName: 'Solution L2', flex: 1, minWidth: 120 },
-    { field: 'solution_area_l1', headerName: 'Sol Area L1', flex: 1, minWidth: 120 },
-    { field: 'drm_category',   headerName: 'DRM',         flex: 1, minWidth: 100 },
-    { field: 'closing_qtr',    headerName: 'Closing Qtr', flex: 1, minWidth: 100 },
-    { field: 'acv_total_opp',  headerName: `Opp ACV (${currency})`, flex: 1, minWidth: 110, valueFormatter: (p: any) => formatAcvK(Number(p.value || 0) * fx, currency) },
+    { field: 'activity_date',    headerName: 'Date',             flex: 1, minWidth: 100, valueFormatter: (p: any) => p.value ? String(p.value).slice(0, 10) : '—' },
+    { field: 'account_name',     headerName: 'Account',          flex: 2, minWidth: 160 },
+    { field: 'sa_name',          headerName: 'SA',               flex: 1, minWidth: 130 },
+    { field: 'opp_main_sol_l2',  headerName: 'Opp Solution L2',  flex: 1, minWidth: 160 },
+    { field: 'activity_type',    headerName: 'Type',             flex: 1, minWidth: 100 },
+    { field: 'solution_l2',      headerName: 'Activity Sol L2',  flex: 1, minWidth: 120 },
+    { field: 'solution_area_l1', headerName: 'Sol Area L1',      flex: 1, minWidth: 120 },
+    { field: 'drm_category',     headerName: 'DRM',              flex: 1, minWidth: 100 },
+    { field: 'closing_qtr',      headerName: 'Closing Qtr',      flex: 1, minWidth: 100 },
+    { field: 'acv_total_opp',    headerName: `Opp ACV (${currency})`, flex: 1, minWidth: 110, valueFormatter: (p: any) => formatAcvK(Number(p.value || 0) * fx, currency) },
   ], [fx, currency])
 
   // ── Partner opportunity table columns (full set, like Opportunity List) ─────
@@ -479,7 +479,7 @@ export default function PartnerAnalysisPage() {
 
       {/* Demo Activity section — collapsible */}
       <CollapsibleFrame
-        title="Demo Support by Partner × SA LoB (Melody Activity Time)"
+        title="Demo Support by Partner × Opp Solution L2 (Melody Activity)"
         open={demoOpen}
         onToggle={() => setDemoOpen(o => !o)}
       >

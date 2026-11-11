@@ -634,8 +634,6 @@ export default function PartnerAnalysisPage() {
           <div className="bg-white rounded border p-3">
             <EChart option={demoChartOption} style={{ height: 320 }} />
           </div>
-
-          <DataTable rows={filteredDemoRows} cols={demoCols} autoHeight />
         </div>
       </CollapsibleFrame>
 
@@ -672,7 +670,6 @@ export default function PartnerAnalysisPage() {
           <div className="bg-white rounded border p-3">
             <EChart option={demoL3ChartOption} style={{ height: 320 }} />
           </div>
-          <DataTable rows={filteredDemoL3Rows} cols={demoL3Cols} autoHeight />
         </div>
       </CollapsibleFrame>
 
@@ -709,7 +706,6 @@ export default function PartnerAnalysisPage() {
           <div className="bg-white rounded border p-3">
             <EChart option={demoL4ChartOption} style={{ height: 320 }} />
           </div>
-          <DataTable rows={filteredDemoL4Rows} cols={demoL4Cols} autoHeight />
         </div>
       </CollapsibleFrame>
 

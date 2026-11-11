@@ -115,7 +115,7 @@ export function EChart({ option, height = 320, className = '', chartId }: Props)
 
   return (
     <div className={`bg-white border border-sap-border rounded-xl shadow-card p-2 ${className}`}>
-      <ReactECharts ref={ref} option={merged} style={{ height }} opts={{ renderer: 'canvas' }} />
+      <ReactECharts ref={ref} option={merged} style={{ height }} opts={{ renderer: 'canvas' }} notMerge={true} />
     </div>
   )
 }

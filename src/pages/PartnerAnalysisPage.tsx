@@ -64,7 +64,11 @@ export default function PartnerAnalysisPage() {
   const [demoDateTo, setDemoDateTo]     = useState('')
   const [demoOppMainSolL2, setDemoOppMainSolL2] = useState('')
   const [demoLobFilters, setDemoLobFilters] = useState<string[]>([])
+  const [demoL3Filters, setDemoL3Filters] = useState<string[]>([])
+  const [demoL4Filters, setDemoL4Filters] = useState<string[]>([])
   const [demoOpen, setDemoOpen]         = useState(false)
+  const [demoL3Open, setDemoL3Open]     = useState(false)
+  const [demoL4Open, setDemoL4Open]     = useState(false)
   const [engagementOpen, setEngagementOpen] = useState(true)
   const [selectedPartner, setSelectedPartner] = useState<string | null>(null)
   const [selectedOpp, setSelectedOpp] = useState<any>(null)
@@ -107,6 +111,16 @@ export default function PartnerAnalysisPage() {
   const { data: demoRows = [] } = useQuery({
     queryKey: ['partner-demo-activity', demoParams],
     queryFn: () => fetch('/api/partner-analysis/demo-activity', demoParams),
+  })
+
+  const { data: demoL3Rows = [] } = useQuery({
+    queryKey: ['partner-demo-activity-l3', demoParams],
+    queryFn: () => fetch('/api/partner-analysis/demo-activity-l3', demoParams),
+  })
+
+  const { data: demoL4Rows = [] } = useQuery({
+    queryKey: ['partner-demo-activity-l4', demoParams],
+    queryFn: () => fetch('/api/partner-analysis/demo-activity-l4', demoParams),
   })
 
   // Partner detail (drill-down)
@@ -337,6 +351,90 @@ export default function PartnerAnalysisPage() {
     }
   }, [filteredDemoRows])
 
+  // ── Chart: Demo Activity by Partner × Opp Solution L3 ────────────────────
+  const availableL3s = useMemo(() =>
+    [...new Set(demoL3Rows.map((r: any) => r.opp_main_sol_l3))].filter(Boolean).sort() as string[]
+  , [demoL3Rows])
+
+  const filteredDemoL3Rows = useMemo(() =>
+    demoL3Filters.length ? demoL3Rows.filter((r: any) => demoL3Filters.includes(r.opp_main_sol_l3)) : demoL3Rows
+  , [demoL3Rows, demoL3Filters])
+
+  const demoL3ChartOption = useMemo<EChartsOption>(() => {
+    const partners = [...new Set(filteredDemoL3Rows.map(r => r.partner))].slice(0, 12)
+    const sols = [...new Set(filteredDemoL3Rows.map(r => r.opp_main_sol_l3))].filter(l => l && l !== 'Not Specified')
+    if (filteredDemoL3Rows.find(r => r.opp_main_sol_l3 === 'Not Specified')) sols.push('Not Specified')
+    const pal = ['#0070f2','#e66a2c','#1a7f4b','#a020f0','#c00000','#0080a0','#f0a000','#408060','#808080']
+    return {
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+        formatter: (params: any[]) => `<b>${params[0]?.axisValue}</b><br/>` +
+          params.filter(p => p.value > 0).map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b> activities`).join('<br/>') },
+      legend: { data: sols, bottom: 0, textStyle: { fontSize: 10 } },
+      grid: { left: 8, right: 16, top: 8, bottom: 52, containLabel: true },
+      xAxis: { type: 'category', data: partners, axisLabel: { rotate: 35, fontSize: 10, width: 120, overflow: 'truncate' } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#788fa6' } },
+      series: sols.map((sol, i) => ({
+        name: sol, type: 'bar', stack: 'total',
+        itemStyle: { color: pal[i % pal.length] },
+        data: partners.map(p => {
+          const r = filteredDemoL3Rows.find(x => x.partner === p && x.opp_main_sol_l3 === sol)
+          return r?.n_activities ?? 0
+        }),
+        label: { show: false },
+      })),
+    }
+  }, [filteredDemoL3Rows])
+
+  const demoL3Cols = useMemo(() => [
+    { field: 'partner',          headerName: 'Partner',           flex: 2, minWidth: 180 },
+    { field: 'opp_main_sol_l3',  headerName: 'Opp Solution L3',  flex: 2, minWidth: 180 },
+    { field: 'n_activities',     headerName: '# Activities',      flex: 1, minWidth: 100, sort: 'desc' },
+    { field: 'n_distinct_opps',  headerName: '# Opps',            flex: 1, minWidth: 80 },
+    { field: 'n_distinct_sas',   headerName: '# SAs',             flex: 1, minWidth: 80 },
+  ], [])
+
+  // ── Chart: Demo Activity by Partner × Opp Solution L4 ────────────────────
+  const availableL4s = useMemo(() =>
+    [...new Set(demoL4Rows.map((r: any) => r.opp_main_sol_l4))].filter(Boolean).sort() as string[]
+  , [demoL4Rows])
+
+  const filteredDemoL4Rows = useMemo(() =>
+    demoL4Filters.length ? demoL4Rows.filter((r: any) => demoL4Filters.includes(r.opp_main_sol_l4)) : demoL4Rows
+  , [demoL4Rows, demoL4Filters])
+
+  const demoL4ChartOption = useMemo<EChartsOption>(() => {
+    const partners = [...new Set(filteredDemoL4Rows.map(r => r.partner))].slice(0, 12)
+    const sols = [...new Set(filteredDemoL4Rows.map(r => r.opp_main_sol_l4))].filter(l => l && l !== 'Not Specified')
+    if (filteredDemoL4Rows.find(r => r.opp_main_sol_l4 === 'Not Specified')) sols.push('Not Specified')
+    const pal = ['#0070f2','#e66a2c','#1a7f4b','#a020f0','#c00000','#0080a0','#f0a000','#408060','#808080']
+    return {
+      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' },
+        formatter: (params: any[]) => `<b>${params[0]?.axisValue}</b><br/>` +
+          params.filter(p => p.value > 0).map(p => `${p.marker}${p.seriesName}: <b>${p.value}</b> activities`).join('<br/>') },
+      legend: { data: sols, bottom: 0, textStyle: { fontSize: 10 } },
+      grid: { left: 8, right: 16, top: 8, bottom: 52, containLabel: true },
+      xAxis: { type: 'category', data: partners, axisLabel: { rotate: 35, fontSize: 10, width: 120, overflow: 'truncate' } },
+      yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#788fa6' } },
+      series: sols.map((sol, i) => ({
+        name: sol, type: 'bar', stack: 'total',
+        itemStyle: { color: pal[i % pal.length] },
+        data: partners.map(p => {
+          const r = filteredDemoL4Rows.find(x => x.partner === p && x.opp_main_sol_l4 === sol)
+          return r?.n_activities ?? 0
+        }),
+        label: { show: false },
+      })),
+    }
+  }, [filteredDemoL4Rows])
+
+  const demoL4Cols = useMemo(() => [
+    { field: 'partner',          headerName: 'Partner',           flex: 2, minWidth: 180 },
+    { field: 'opp_main_sol_l4',  headerName: 'Opp Solution L4',  flex: 2, minWidth: 180 },
+    { field: 'n_activities',     headerName: '# Activities',      flex: 1, minWidth: 100, sort: 'desc' },
+    { field: 'n_distinct_opps',  headerName: '# Opps',            flex: 1, minWidth: 80 },
+    { field: 'n_distinct_sas',   headerName: '# SAs',             flex: 1, minWidth: 80 },
+  ], [])
+
   // ── Partner summary table columns ───────────────────────────────────────────
   const fmtAcv = (p: any) => formatAcvK(Number(p.value || 0) * fx, currency)
 
@@ -538,6 +636,80 @@ export default function PartnerAnalysisPage() {
           </div>
 
           <DataTable rows={filteredDemoRows} cols={demoCols} autoHeight />
+        </div>
+      </CollapsibleFrame>
+
+      {/* Demo Activity L3 */}
+      <CollapsibleFrame
+        title="Demo Support by Partner × Opp Solution L3 (Melody Activity)"
+        open={demoL3Open}
+        onToggle={() => setDemoL3Open(o => !o)}
+      >
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-3 items-end">
+            {availableL3s.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Solution L3</label>
+                <div className="flex flex-wrap gap-1">
+                  {availableL3s.map(lob => (
+                    <button key={lob}
+                      onClick={() => setDemoL3Filters(p => p.includes(lob) ? p.filter(x => x !== lob) : [...p, lob])}
+                      className={`text-[11px] px-2 py-1 rounded-lg border font-semibold transition ${
+                        demoL3Filters.includes(lob)
+                          ? 'bg-sap-blue text-white border-sap-blue'
+                          : 'border-sap-border text-sap-muted hover:bg-sap-bg'
+                      }`}>
+                      {lob}
+                    </button>
+                  ))}
+                  {demoL3Filters.length > 0 && (
+                    <button onClick={() => setDemoL3Filters([])} className="text-[10px] text-sap-error hover:underline self-center ml-1">Clear</button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="bg-white rounded border p-3">
+            <EChart option={demoL3ChartOption} style={{ height: 320 }} />
+          </div>
+          <DataTable rows={filteredDemoL3Rows} cols={demoL3Cols} autoHeight />
+        </div>
+      </CollapsibleFrame>
+
+      {/* Demo Activity L4 */}
+      <CollapsibleFrame
+        title="Demo Support by Partner × Opp Solution L4 (Melody Activity)"
+        open={demoL4Open}
+        onToggle={() => setDemoL4Open(o => !o)}
+      >
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-3 items-end">
+            {availableL4s.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Solution L4</label>
+                <div className="flex flex-wrap gap-1">
+                  {availableL4s.map(lob => (
+                    <button key={lob}
+                      onClick={() => setDemoL4Filters(p => p.includes(lob) ? p.filter(x => x !== lob) : [...p, lob])}
+                      className={`text-[11px] px-2 py-1 rounded-lg border font-semibold transition ${
+                        demoL4Filters.includes(lob)
+                          ? 'bg-sap-blue text-white border-sap-blue'
+                          : 'border-sap-border text-sap-muted hover:bg-sap-bg'
+                      }`}>
+                      {lob}
+                    </button>
+                  ))}
+                  {demoL4Filters.length > 0 && (
+                    <button onClick={() => setDemoL4Filters([])} className="text-[10px] text-sap-error hover:underline self-center ml-1">Clear</button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="bg-white rounded border p-3">
+            <EChart option={demoL4ChartOption} style={{ height: 320 }} />
+          </div>
+          <DataTable rows={filteredDemoL4Rows} cols={demoL4Cols} autoHeight />
         </div>
       </CollapsibleFrame>
 

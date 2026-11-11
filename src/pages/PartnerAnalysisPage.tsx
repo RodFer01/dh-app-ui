@@ -63,6 +63,7 @@ export default function PartnerAnalysisPage() {
   const [demoDateFrom, setDemoDateFrom] = useState('')
   const [demoDateTo, setDemoDateTo]     = useState('')
   const [demoOppMainSolL2, setDemoOppMainSolL2] = useState('')
+  const [demoLobFilters, setDemoLobFilters] = useState<string[]>([])
   const [demoOpen, setDemoOpen]         = useState(false)
   const [engagementOpen, setEngagementOpen] = useState(true)
   const [selectedPartner, setSelectedPartner] = useState<string | null>(null)
@@ -297,10 +298,18 @@ export default function PartnerAnalysisPage() {
   }, [bysolRows])
 
   // ── Chart: Demo Activity by Partner × SA LoB ───────────────────────────────
+  const availableLobs = useMemo(() =>
+    [...new Set(demoRows.map((r: any) => r.opp_main_sol_l2))].filter(Boolean).sort() as string[]
+  , [demoRows])
+
+  const filteredDemoRows = useMemo(() =>
+    demoLobFilters.length ? demoRows.filter((r: any) => demoLobFilters.includes(r.opp_main_sol_l2)) : demoRows
+  , [demoRows, demoLobFilters])
+
   const demoChartOption = useMemo<EChartsOption>(() => {
-    const partners = [...new Set(demoRows.map(r => r.partner))].slice(0, 12)
-    const sols     = [...new Set(demoRows.map(r => r.opp_main_sol_l2))].filter(l => l && l !== 'Not Specified')
-    if (demoRows.find(r => r.opp_main_sol_l2 === 'Not Specified')) sols.push('Not Specified')
+    const partners = [...new Set(filteredDemoRows.map(r => r.partner))].slice(0, 12)
+    const sols     = [...new Set(filteredDemoRows.map(r => r.opp_main_sol_l2))].filter(l => l && l !== 'Not Specified')
+    if (filteredDemoRows.find(r => r.opp_main_sol_l2 === 'Not Specified')) sols.push('Not Specified')
 
     const lobPalette = ['#0070f2','#e66a2c','#1a7f4b','#a020f0','#c00000','#0080a0','#f0a000','#408060','#808080']
 
@@ -320,13 +329,13 @@ export default function PartnerAnalysisPage() {
         name: sol, type: 'bar', stack: 'total',
         itemStyle: { color: lobPalette[i % lobPalette.length] },
         data: partners.map(p => {
-          const r = demoRows.find(x => x.partner === p && x.opp_main_sol_l2 === sol)
+          const r = filteredDemoRows.find(x => x.partner === p && x.opp_main_sol_l2 === sol)
           return r?.n_activities ?? 0
         }),
         label: { show: false },
       })),
     }
-  }, [demoRows])
+  }, [filteredDemoRows])
 
   // ── Partner summary table columns ───────────────────────────────────────────
   const fmtAcv = (p: any) => formatAcvK(Number(p.value || 0) * fx, currency)
@@ -495,18 +504,31 @@ export default function PartnerAnalysisPage() {
               <input type="date" value={demoDateTo} onChange={e => setDemoDateTo(e.target.value)}
                 className="text-sm border rounded px-2 py-1.5" />
             </div>
-            <div>
-              <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide block mb-1">Opp Solution Area L2</label>
-              <select value={demoOppMainSolL2} onChange={e => setDemoOppMainSolL2(e.target.value)}
-                className="text-sm border rounded px-2 py-1.5 bg-white min-w-[160px]">
-                <option value="">All</option>
-                {(melodyOpts.opp_main_sol_l2s ?? []).map((v: string) => <option key={v} value={v}>{v}</option>)}
-              </select>
-            </div>
+            {availableLobs.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] font-medium text-gray-500 uppercase tracking-wide">Solution L2 (LoB)</label>
+                <div className="flex flex-wrap gap-1">
+                  {availableLobs.map(lob => (
+                    <button key={lob}
+                      onClick={() => setDemoLobFilters(p => p.includes(lob) ? p.filter(x => x !== lob) : [...p, lob])}
+                      className={`text-[11px] px-2 py-1 rounded-lg border font-semibold transition ${
+                        demoLobFilters.includes(lob)
+                          ? 'bg-sap-blue text-white border-sap-blue'
+                          : 'border-sap-border text-sap-muted hover:bg-sap-bg'
+                      }`}>
+                      {lob}
+                    </button>
+                  ))}
+                  {demoLobFilters.length > 0 && (
+                    <button onClick={() => setDemoLobFilters([])} className="text-[10px] text-sap-error hover:underline self-center ml-1">Clear</button>
+                  )}
+                </div>
+              </div>
+            )}
             {(demoDateFrom || demoDateTo || demoOppMainSolL2) && (
               <button onClick={() => { setDemoDateFrom(''); setDemoDateTo(''); setDemoOppMainSolL2('') }}
                 className="text-xs text-gray-500 hover:text-gray-700 border rounded px-2 py-1.5">
-                Clear filters
+                Clear dates
               </button>
             )}
           </div>
@@ -515,7 +537,7 @@ export default function PartnerAnalysisPage() {
             <EChart option={demoChartOption} style={{ height: 320 }} />
           </div>
 
-          <DataTable rows={demoRows} cols={demoCols} autoHeight />
+          <DataTable rows={filteredDemoRows} cols={demoCols} autoHeight />
         </div>
       </CollapsibleFrame>
 

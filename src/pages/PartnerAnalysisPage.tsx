@@ -710,7 +710,7 @@ export default function PartnerAnalysisPage() {
             )}
           </div>
           <div className="bg-white rounded border p-3">
-            <EChart option={demoL4ChartOption} style={{ height: 320 }} />
+            <EChart key={demoLobFilters.join(',')} option={demoL4ChartOption} style={{ height: 320 }} />
           </div>
         </div>
       </CollapsibleFrame>

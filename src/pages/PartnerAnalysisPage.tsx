@@ -114,13 +114,19 @@ export default function PartnerAnalysisPage() {
   })
 
   const { data: demoL3Rows = [] } = useQuery({
-    queryKey: ['partner-demo-activity-l3', demoParams],
-    queryFn: () => fetch('/api/partner-analysis/demo-activity-l3', demoParams),
+    queryKey: ['partner-demo-activity-l3', demoParams, demoLobFilters],
+    queryFn: () => fetch('/api/partner-analysis/demo-activity-l3', {
+      ...demoParams,
+      ...(demoLobFilters.length && { opp_main_sol_l2s: demoLobFilters }),
+    }),
   })
 
   const { data: demoL4Rows = [] } = useQuery({
-    queryKey: ['partner-demo-activity-l4', demoParams],
-    queryFn: () => fetch('/api/partner-analysis/demo-activity-l4', demoParams),
+    queryKey: ['partner-demo-activity-l4', demoParams, demoLobFilters],
+    queryFn: () => fetch('/api/partner-analysis/demo-activity-l4', {
+      ...demoParams,
+      ...(demoLobFilters.length && { opp_main_sol_l2s: demoLobFilters }),
+    }),
   })
 
   // Partner detail (drill-down)

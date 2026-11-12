@@ -550,7 +550,7 @@ export default function PipelineProgressionPage() {
         <div className={selectedFrom === 'top' && selectedOpp ? 'flex gap-4 items-start mt-2' : 'mt-2'}
           style={selectedFrom === 'top' && selectedOpp ? { minHeight: 'calc(100vh - 140px)' } : {}}>
           <div className={selectedFrom === 'top' && selectedOpp ? 'flex-1 min-w-0' : ''}>
-            <DataTable rows={topOppsRows} cols={topOppsCols} height={selectedFrom === 'top' && selectedOpp ? 480 : 380} onRowClick={handleSelectTopOpp} />
+            <DataTable rows={bbRowsByAcv} cols={topOppsCols} height={selectedFrom === 'top' && selectedOpp ? 480 : 380} onRowClick={handleSelectTopOpp} />
           </div>
           {selectedFrom === 'top' && selectedOpp && (
             <div className="w-[62%] flex-shrink-0 sticky top-4">

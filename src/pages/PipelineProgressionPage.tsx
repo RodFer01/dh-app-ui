@@ -174,7 +174,6 @@ export default function PipelineProgressionPage() {
       return {
         name: cat,
         type: 'bar' as const,
-        stack: 'total',
         itemStyle: { color: DRM_COLORS[cat] ?? '#8899aa' },
         label: { show: true, fontSize: 9, color: '#fff', formatter: (p: any) => p.value > 5000 ? moneyK(p.value) : '' },
         data: weeks.map((w, i) => {
@@ -226,7 +225,6 @@ export default function PipelineProgressionPage() {
       return {
         name: phase,
         type: 'bar' as const,
-        stack: 'total',
         itemStyle: { color },
         label: { show: true, fontSize: 9, color: '#fff', formatter: (p: any) => p.value > 0 ? String(p.value) : '' },
         data: weeks.map((w, wi) => {

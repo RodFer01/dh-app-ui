@@ -46,11 +46,13 @@ function ppParams(p: Record<string, any>, extras: Record<string, any> = {}): Rec
   const fields = [
     'closing_qtrs', 'regions', 'region_lvl4s', 'sol_l1s', 'sol_l2s', 'drms', 'opp_phases',
     'qual_decisions', 'iss_groups', 'iacs', 'flsms', 'opp_owners', 'local_owners',
-    'channel_partners', 'acc_sub_segments', 'engagement_types',
+    'channel_partners', 'acc_sub_segments',
   ]
   for (const f of fields) {
     if (p[f]?.length) out[f] = p[f]
   }
+  // buildParams produces engagement_type (string); past_pipeline endpoint expects engagement_types (list)
+  if (p.engagement_type) out.engagement_types = [p.engagement_type]
   return { ...out, ...extras }
 }
 

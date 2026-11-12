@@ -1,21 +1,32 @@
 // @ts-nocheck
-import { useMemo } from 'react'
-import { EChart } from './EChart'
+import { useMemo, useState } from 'react'
 
-const DRM_COLORS: Record<string, string> = {
-  'Committed':              '#0070f2',
-  'Probable':               '#4cb1ff',
-  'Upside':                 '#f0ab00',
-  'Partner Upside':         '#ffd666',
-  'Partner Forecasted':     '#9ec8f7',
-  'Exclude from Pipeline':  '#8899aa',
-  'Disc/Lost':              '#aa0808',
-  'Booked/Won':             '#256f3a',
-  'Pipeline':               '#a0b4c8',
-  'Omit':                   '#d04a4a',
-  'Digital':                '#0070f2',
-  'Field':                  '#4cb1ff',
-  'No Engagement':          '#c8d8f0',
+type ColorDef = { bg: string; text: string; badge: string }
+
+const DRM_COLORS: Record<string, ColorDef> = {
+  'Committed':              { bg: '#0070f2', text: '#fff',    badge: '#fff3' },
+  'Probable':               { bg: '#4cb1ff', text: '#fff',    badge: '#fff3' },
+  'Upside':                 { bg: '#f0ab00', text: '#fff',    badge: '#fff3' },
+  'Partner Upside':         { bg: '#e6b800', text: '#fff',    badge: '#fff3' },
+  'Partner Forecasted':     { bg: '#7b9ec7', text: '#fff',    badge: '#fff3' },
+  'Exclude from Pipeline':  { bg: '#556b82', text: '#fff',    badge: '#fff3' },
+  'Disc/Lost':              { bg: '#aa0808', text: '#fff',    badge: '#fff3' },
+  'Booked/Won':             { bg: '#256f3a', text: '#fff',    badge: '#fff3' },
+  'Pipeline':               { bg: '#6b8499', text: '#fff',    badge: '#fff3' },
+  'Omit':                   { bg: '#c04040', text: '#fff',    badge: '#fff3' },
+  'Digital':                { bg: '#0070f2', text: '#fff',    badge: '#fff3' },
+  'Field':                  { bg: '#4cb1ff', text: '#fff',    badge: '#fff3' },
+  'No Engagement':          { bg: '#8899aa', text: '#fff',    badge: '#fff3' },
+}
+const DEFAULT_COLOR: ColorDef = { bg: '#788fa6', text: '#fff', badge: '#fff3' }
+
+const TOP_N_OPTIONS: Array<number | 'Todos'> = [10, 20, 40, 'Todos']
+
+function fmtAcv(v: number, sym = '$'): string {
+  if (v == null) return '—'
+  if (v >= 1e6) return `${sym}${(v / 1e6).toFixed(2)}Mi`
+  if (v >= 1e3) return `${sym}${(v / 1e3).toFixed(0)}K`
+  return `${sym}${Math.round(v)}`
 }
 
 interface Props {
@@ -25,7 +36,6 @@ interface Props {
   currency?: 'USD' | 'EUR'
   fx?: number
   title?: string
-  height?: number
 }
 
 export function BuildingBlockChart({
@@ -34,108 +44,177 @@ export function BuildingBlockChart({
   valueField,
   currency = 'USD',
   fx = 1,
-  title = 'Pipeline — Building Block View',
-  height = 380,
+  title = 'Pipeline — Building Block',
 }: Props) {
+  const [topN, setTopN] = useState<number | 'Todos'>(20)
   const sym = currency === 'EUR' ? '€' : '$'
 
-  const option = useMemo(() => {
-    // Group rows by groupBy field, pick best ACV field available
-    const groups: Record<string, any[]> = {}
-    for (const r of rows) {
-      const key = String(r[groupBy] ?? 'Other')
-      const rawAcv = valueField
-        ? Number(r[valueField] ?? 0)
-        : Number(r.acv_usd ?? r.acv_total_opp ?? 0)
-      const val = rawAcv * fx
-      if (val <= 0) continue
-      if (!groups[key]) groups[key] = []
-      const label = [r.account_name, r.opp_description || r.opportunity_id]
-        .filter(Boolean).join(' — ')
-      groups[key].push({ name: label || key, value: val })
+  const getAcv = (r: any): number => {
+    const raw = valueField
+      ? Number(r[valueField] ?? 0)
+      : Number(r.acv_usd ?? r.acv_total_opp ?? 0)
+    return raw * fx
+  }
+
+  // Sort all rows by ACV desc
+  const sortedRows = useMemo(
+    () => [...rows].sort((a, b) => getAcv(b) - getAcv(a)),
+    [rows, fx, valueField]
+  )
+
+  // Rows to show as cards (top N globally)
+  const visibleRows = useMemo(
+    () => (topN === 'Todos' ? sortedRows : sortedRows.slice(0, topN)),
+    [sortedRows, topN]
+  )
+
+  // Group ALL rows → category totals
+  const allGroups = useMemo(() => {
+    const g: Record<string, { total: number; count: number; rows: any[] }> = {}
+    for (const r of sortedRows) {
+      const k = String(r[groupBy] ?? 'Other')
+      if (!g[k]) g[k] = { total: 0, count: 0, rows: [] }
+      g[k].total += getAcv(r)
+      g[k].count += 1
+      g[k].rows.push(r)
     }
+    return g
+  }, [sortedRows, groupBy, fx, valueField])
 
-    const data = Object.entries(groups)
-      .filter(([, children]) => children.length > 0)
-      .map(([cat, children]) => {
-        const total = children.reduce((s, c) => s + c.value, 0)
-        const color = DRM_COLORS[cat] ?? '#788fa6'
-        return {
-          name: cat,
-          value: total,
-          itemStyle: { color },
-          children: children.map(c => ({
-            ...c,
-            itemStyle: { color: color + 'cc' },
-          })),
-        }
-      })
-      .sort((a, b) => b.value - a.value)
+  // Which rows are visible per category
+  const visibleSet = useMemo(() => new Set(visibleRows.map(r => r.opportunity_id ?? r)), [visibleRows])
 
-    const fmtAcv = (v: number) =>
-      v >= 1e6 ? `${sym}${(v / 1e6).toFixed(2)}Mi` : `${sym}${(v / 1e3).toFixed(2)}K`
+  // Sorted categories (ascending ACV so smallest block is leftmost)
+  const categories = useMemo(
+    () => Object.entries(allGroups).sort((a, b) => a[1].total - b[1].total),
+    [allGroups]
+  )
 
-    return {
-      title: {
-        text: title,
-        textStyle: { fontSize: 13, fontWeight: 600, color: '#32363A' },
-        top: 6, left: 12,
-      },
-      tooltip: {
-        formatter: (info: any) => {
-          const val = info.value
-          const depth = info.treePathInfo?.length ?? 0
-          const parentName = depth > 1 ? info.treePathInfo[1]?.name : ''
-          return `${parentName ? `<span style="color:#788fa6;font-size:10px">${parentName}</span><br/>` : ''}<b>${info.name}</b><br/>ACV: <b>${fmtAcv(val)}</b>`
-        },
-      },
-      series: [
-        {
-          type: 'treemap',
-          visibleMin: 200,
-          roam: false,
-          nodeClick: false,
-          squareRatio: 0.8,
-          breadcrumb: { show: false },
-          top: 40,
-          levels: [
-            {
-              // parent category
-              itemStyle: { borderWidth: 3, borderColor: '#ffffff', gapWidth: 3 },
-              upperLabel: {
-                show: true,
-                height: 22,
-                fontSize: 11,
-                fontWeight: 700,
-                color: '#ffffff',
-                overflow: 'truncate',
-                ellipsis: true,
-              },
-              label: { show: false },
-            },
-            {
-              // individual opps
-              itemStyle: { borderWidth: 1, borderColor: '#ffffff55', gapWidth: 1 },
-              label: {
-                show: true,
-                fontSize: 9,
-                color: '#fff',
-                overflow: 'truncate',
-                formatter: (p: any) => fmtAcv(p.value),
-              },
-            },
-          ],
-          data,
-        },
-      ],
-    }
-  }, [rows, groupBy, valueField, fx, title, sym])
+  const maxAcv = useMemo(
+    () => Math.max(...categories.map(([, v]) => v.total), 1),
+    [categories]
+  )
 
-  if (!rows || rows.length === 0) return null
+  const MAX_H = 520  // max block height in px
+  const MIN_H = 110  // min block height in px
+
+  if (!rows.length) return null
 
   return (
-    <div className="bg-white rounded border p-3 mt-2">
-      <EChart option={option} style={{ height }} notMerge />
+    <div className="bg-white rounded border p-4 mt-2">
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <div className="text-[13px] font-bold text-sap-text">{title}</div>
+          <div className="text-[10px] text-sap-muted mt-0.5">
+            Distribuição por categoria · tamanho proporcional ao ACV · {sortedRows.length} oportunidades
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] font-semibold text-sap-muted uppercase tracking-wide mr-1.5">Top:</span>
+          {TOP_N_OPTIONS.map(n => (
+            <button
+              key={String(n)}
+              onClick={() => setTopN(n)}
+              className={`px-2.5 py-1 text-[11px] font-semibold rounded-md border transition ${
+                topN === n
+                  ? 'bg-sap-blue text-white border-sap-blue'
+                  : 'border-sap-border text-sap-muted hover:bg-sap-bg'
+              }`}
+            >
+              {n === 'Todos' ? 'Todos' : n}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Building blocks — bottom aligned */}
+      <div className="flex gap-1.5 items-end">
+        {categories.map(([cat, { total, count, rows: catRows }]) => {
+          const pct = total / maxAcv
+          const blockH = Math.max(MIN_H, Math.round(pct * MAX_H))
+          const color = DRM_COLORS[cat] ?? DEFAULT_COLOR
+          const catVisibleRows = catRows.filter(r =>
+            visibleSet.has(r.opportunity_id ?? r)
+          )
+          const hiddenCount = count - catVisibleRows.length
+
+          return (
+            <div
+              key={cat}
+              className="flex-1 min-w-0 rounded-lg overflow-hidden flex flex-col"
+              style={{ height: blockH, backgroundColor: color.bg }}
+            >
+              {/* Category header */}
+              <div className="px-2.5 pt-2 pb-1 shrink-0 border-b border-white/20">
+                <div className="text-[9px] font-bold uppercase tracking-widest text-white/70 truncate">{cat}</div>
+                <div className="text-[16px] font-black text-white leading-tight">{fmtAcv(total, sym)}</div>
+                <div className="text-[9px] text-white/60">{count} opp{count !== 1 ? 's' : ''}</div>
+              </div>
+
+              {/* Opp cards (scrollable) */}
+              <div className="flex-1 overflow-y-auto px-1.5 py-1 space-y-1">
+                {catVisibleRows.map((r: any, i: number) => {
+                  const acv = getAcv(r)
+                  const cat2 = String(r[groupBy] ?? '')
+                  const c2 = DRM_COLORS[cat2] ?? DEFAULT_COLOR
+                  return (
+                    <div
+                      key={r.opportunity_id ?? i}
+                      className="rounded p-1.5"
+                      style={{ backgroundColor: 'rgba(255,255,255,0.18)' }}
+                    >
+                      <div className="flex items-start justify-between gap-1">
+                        <div
+                          className="text-[10px] font-bold leading-tight truncate"
+                          style={{ color: '#fff', maxWidth: '65%' }}
+                        >
+                          {r.account_name || '—'}
+                        </div>
+                        <div
+                          className="text-[11px] font-black shrink-0"
+                          style={{ color: '#fff' }}
+                        >
+                          {fmtAcv(acv, sym)}
+                        </div>
+                      </div>
+                      {r.opp_description && (
+                        <div
+                          className="text-[8px] mt-0.5 truncate"
+                          style={{ color: 'rgba(255,255,255,0.65)' }}
+                        >
+                          {r.opp_description}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+                {hiddenCount > 0 && (
+                  <div
+                    className="text-[9px] text-center py-0.5 font-medium"
+                    style={{ color: 'rgba(255,255,255,0.55)' }}
+                  >
+                    +{hiddenCount} mais
+                  </div>
+                )}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      {/* X-axis labels */}
+      <div className="flex gap-1.5 mt-1">
+        {categories.map(([cat]) => (
+          <div
+            key={cat}
+            className="flex-1 min-w-0 text-[9px] font-semibold text-center truncate"
+            style={{ color: (DRM_COLORS[cat] ?? DEFAULT_COLOR).bg }}
+          >
+            {cat}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

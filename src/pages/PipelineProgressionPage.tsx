@@ -212,7 +212,7 @@ export default function PipelineProgressionPage() {
     }
   }, [evolutionRows])
 
-  // ── Opp Phase evolution — line chart (# opps per phase over time) ─────────────
+  // ── Opp Phase evolution — stacked bar chart (# opps per phase over time) ─────────────
   const phaseOption = useMemo<EChartsOption>(() => {
     const weeks  = [...new Set(phaseRows.map((r: any) => r.snapshot_week))].sort() as string[]
     const phases = [...new Set(phaseRows.map((r: any) => r.opp_phase))].sort() as string[]
@@ -225,26 +225,40 @@ export default function PipelineProgressionPage() {
       const color = PHASE_PALETTE[i % PHASE_PALETTE.length]
       return {
         name: phase,
-        type: 'line' as const,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 5,
-        lineStyle: { width: 2, color },
+        type: 'bar' as const,
+        stack: 'total',
         itemStyle: { color },
-        data: weeks.map(w => byWeek[w] ?? 0),
+        label: { show: true, fontSize: 9, color: '#fff', formatter: (p: any) => p.value > 0 ? String(p.value) : '' },
+        data: weeks.map((w, wi) => {
+          const curr = byWeek[w] ?? 0
+          const prev = wi > 0 ? (byWeek[weeks[wi - 1]] ?? 0) : null
+          const deltaPct = prev != null && prev > 0 ? ((curr - prev) / prev * 100) : null
+          return { value: curr, deltaPct }
+        }),
       }
     })
 
     return {
       tooltip: {
         trigger: 'axis',
-        formatter: (params: any[]) =>
-          `<b>${params[0]?.axisValue}</b><br/>` +
-          params.map(p => `${p.marker}${p.seriesName}: <b>${p.value} opps</b>`).join('<br/>'),
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any[]) => {
+          const header = `<b>${formatWeek(params[0]?.axisValue)}</b><br/>`
+          const lines = params
+            .filter((p: any) => p.value > 0)
+            .map((p: any) => {
+              const pct = p.data?.deltaPct
+              const pctStr = pct != null
+                ? ` <span style="color:${pct >= 0 ? '#1a7f4b' : '#cc0000'}">(${pct > 0 ? '+' : ''}${pct.toFixed(0)}%)</span>`
+                : ''
+              return `${p.marker}${p.seriesName}: <b>${p.value} opps</b>${pctStr}`
+            })
+          return header + lines.join('<br/>')
+        },
       },
       legend: { data: phases, bottom: 0, textStyle: { fontSize: 11 } },
       grid: { left: 16, right: 16, top: 20, bottom: 48, containLabel: true },
-      xAxis: { type: 'category', data: weeks, axisLabel: { rotate: 30, fontSize: 11 } },
+      xAxis: { type: 'category', data: weeks, axisLabel: { rotate: 30, fontSize: 11, formatter: formatWeek } },
       yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#788fa6' } },
       series,
     }

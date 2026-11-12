@@ -433,7 +433,6 @@ export default function PipelineProgressionPage() {
             currency={currency}
             fx={fx}
             title={`Top ${topLimit} Opps — Building Block (${currency})`}
-            height={340}
           />
         </div>
       )}

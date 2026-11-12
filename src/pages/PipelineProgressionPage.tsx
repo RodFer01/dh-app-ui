@@ -64,6 +64,8 @@ export default function PipelineProgressionPage() {
   const [compareEnabled, setCompareEnabled] = useState(false)
   const [selectedOpp, setSelectedOpp] = useState<any>(null)
   const [noteForm, setNoteForm] = useState(BLANK_NOTE_FORM)
+  const [selectedFrom, setSelectedFrom] = useState<'top' | 'stalled' | null>(null)
+  const [topLimit, setTopLimit] = useState(20)
   const qc = useQueryClient()
 
   // Filter options
@@ -87,6 +89,13 @@ export default function PipelineProgressionPage() {
   const summaryParams = useMemo(
     () => ppParams(debouncedParams, snapshotWeek ? { snapshot_week: snapshotWeek } : {}),
     [debouncedParams, snapshotWeek]
+  )
+  const topOppsParams = useMemo(
+    () => ppParams(debouncedParams, {
+      ...(snapshotWeek ? { snapshot_week: snapshotWeek } : {}),
+      limit: topLimit,
+    }),
+    [debouncedParams, snapshotWeek, topLimit]
   )
 
   // Summary KPIs
@@ -120,9 +129,21 @@ export default function PipelineProgressionPage() {
     queryFn: () => fetch('/api/pipeline-progression/stalled', summaryParams),
   })
 
+  // Top opps by ACV
+  const { data: topOppsRows = [] } = useQuery({
+    queryKey: ['pp-top-opps', topOppsParams],
+    queryFn: () => fetch('/api/pipeline-progression/top-opps', topOppsParams),
+  })
+
   const handleSelectOpp = (row: any) => {
     setSelectedOpp(row)
     setNoteForm(BLANK_NOTE_FORM)
+    setSelectedFrom('stalled')
+  }
+  const handleSelectTopOpp = (row: any) => {
+    setSelectedOpp(row)
+    setNoteForm(BLANK_NOTE_FORM)
+    setSelectedFrom('top')
   }
 
   useQuery({

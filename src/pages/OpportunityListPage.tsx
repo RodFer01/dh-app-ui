@@ -17,6 +17,7 @@ import { X, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react'
 import { oppIdCol } from '../components/OppIdCol'
 import { presalesStatusCol, qualDecisionCol } from '../lib/presalesHelpers'
 import { OppDetailPanel, BLANK_NOTE_FORM } from '../components/OppDetailPanel'
+import { BuildingBlockChart } from '../components/BuildingBlockChart'
 
 export function OpportunityListPage() {
   const { currency, fxRate } = useAuth()
@@ -659,6 +660,19 @@ export function OpportunityListPage() {
             />
           </div>
         )}
+      </div>
+
+      {/* ── Building Block — pipeline breakdown by DRM category ── */}
+      <div>
+        <SectionLabel>Pipeline Building Block — by DRM Category</SectionLabel>
+        <BuildingBlockChart
+          rows={filteredByBag}
+          groupBy="drm_category"
+          currency={currency}
+          fx={fxRate}
+          title={`Pipeline Building Block (${currency})`}
+          height={360}
+        />
       </div>
 
       {/* ── Table + Detail side-by-side ── */}

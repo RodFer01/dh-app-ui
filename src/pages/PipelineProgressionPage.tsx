@@ -11,6 +11,7 @@ import { usePipelineFilters } from '../lib/usePipelineFilters'
 import api from '../lib/api'
 import { formatAcvK } from '../lib/utils'
 import { OppDetailPanel, BLANK_NOTE_FORM } from '../components/OppDetailPanel'
+import { BuildingBlockChart } from '../components/BuildingBlockChart'
 import { useAuth } from '../context/AuthContext'
 
 const DRM_ORDER  = ['Committed', 'Probable', 'Upside', 'Pipeline', 'Omit', 'Other']
@@ -419,6 +420,22 @@ export default function PipelineProgressionPage() {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Building Block — DRM breakdown of top opps */}
+      {topOppsRows.length > 0 && (
+        <div>
+          <SectionLabel>Pipeline Building Block — by DRM Category</SectionLabel>
+          <BuildingBlockChart
+            rows={topOppsRows}
+            groupBy="drm_category"
+            valueField="acv_usd"
+            currency={currency}
+            fx={fx}
+            title={`Top ${topLimit} Opps — Building Block (${currency})`}
+            height={340}
+          />
         </div>
       )}
 

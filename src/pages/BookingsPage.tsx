@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { MultiSelect, SearchMultiSelect } from '../components/MultiSelect'
 
@@ -123,6 +123,7 @@ function BookingCard({ b }: { b: Booking }) {
 }
 
 export function BookingsPage() {
+  const [activeTab, setActiveTab] = useState<'bookings' | 'shadow'>('bookings')
   const [filters, setFilters] = useState({
     closing_qtrs: [] as string[],
     regions: [] as string[],
@@ -159,85 +160,67 @@ export function BookingsPage() {
   return (
     <div className="p-6 max-w-[1400px] mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-[22px] font-black text-sap-text tracking-tight">Bookings</h1>
           <p className="text-[13px] text-sap-muted mt-0.5">
-            {isLoading ? 'Carregando...' : `${bookings.length} oportunidade(s) fechada(s)`}
+            {activeTab === 'bookings'
+              ? (isLoading ? 'Carregando...' : `${bookings.length} oportunidade(s) fechada(s)`)
+              : 'Oportunidades shadow — fechadas sem Digital SA com deals abertos em risco no mesmo cliente'}
           </p>
         </div>
-        {hasFilters && (
-          <button
-            onClick={() => setFilters({ closing_qtrs: [], regions: [], sol_l1s: [], sol_l2s: [], dsas: [], dvas: [], teams: [] })}
-            className="text-[12px] text-sap-blue hover:underline"
-          >
-            Limpar filtros
-          </button>
+        <div className="flex items-center gap-4">
+          {/* Tab switcher */}
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            {(['bookings', 'shadow'] as const).map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`px-3 py-1.5 text-sm rounded-md font-medium transition-colors ${activeTab === tab ? 'bg-white shadow text-sap-blue' : 'text-gray-500 hover:text-gray-700'}`}
+              >
+                {tab === 'bookings' ? 'Bookings' : 'Shadow Opps'}
+              </button>
+            ))}
+          </div>
+          {hasFilters && activeTab === 'bookings' && (
+            <button
+              onClick={() => setFilters({ closing_qtrs: [], regions: [], sol_l1s: [], sol_l2s: [], dsas: [], dvas: [], teams: [] })}
+              className="text-[12px] text-sap-blue hover:underline"
+            >
+              Limpar filtros
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Filters + Cards — Bookings tab */}
+      {activeTab === 'bookings' && (<>
+        <div className="bg-white border border-sap-border rounded-xl p-4 mb-6 flex flex-col gap-3">
+          <div className="grid grid-cols-4 gap-3">
+            <MultiSelect label="Quarter"     selected={filters.closing_qtrs} options={fOpts.closing_qtrs ?? []} onChange={v => setF('closing_qtrs', v)} />
+            <MultiSelect label="Região"      selected={filters.regions}      options={fOpts.regions ?? []}      onChange={v => setF('regions', v)} />
+            <MultiSelect label="Solution L1" selected={filters.sol_l1s}      options={fOpts.sol_l1s ?? []}      onChange={v => setF('sol_l1s', v)} />
+            <MultiSelect label="Solution L2" selected={filters.sol_l2s}      options={fOpts.sol_l2s ?? []}      onChange={v => setF('sol_l2s', v)} />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <MultiSelect       label="Team" selected={filters.teams} options={fOpts.teams ?? []} onChange={v => setF('teams', v)} />
+            <SearchMultiSelect label="DSA"  selected={filters.dsas}  options={fOpts.dsas ?? []}  onChange={v => setF('dsas', v)} />
+            <SearchMultiSelect label="DVA"  selected={filters.dvas}  options={fOpts.dvas ?? []}  onChange={v => setF('dvas', v)} />
+          </div>
+        </div>
+        {isLoading ? (
+          <div className="text-sm text-sap-muted text-center py-16">Carregando...</div>
+        ) : bookings.length === 0 ? (
+          <div className="text-sm text-sap-muted text-center py-16">Nenhum resultado encontrado.</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(bookings as Booking[]).map(b => <BookingCard key={b.opportunity_id} b={b} />)}
+          </div>
         )}
-      </div>
+      </>)}
 
-      {/* Filters */}
-      <div className="bg-white border border-sap-border rounded-xl p-4 mb-6 flex flex-col gap-3">
-        <div className="grid grid-cols-4 gap-3">
-          <MultiSelect
-            label="Quarter"
-            selected={filters.closing_qtrs}
-            options={fOpts.closing_qtrs ?? []}
-            onChange={v => setF('closing_qtrs', v)}
-          />
-          <MultiSelect
-            label="Região"
-            selected={filters.regions}
-            options={fOpts.regions ?? []}
-            onChange={v => setF('regions', v)}
-          />
-          <MultiSelect
-            label="Solution L1"
-            selected={filters.sol_l1s}
-            options={fOpts.sol_l1s ?? []}
-            onChange={v => setF('sol_l1s', v)}
-          />
-          <MultiSelect
-            label="Solution L2"
-            selected={filters.sol_l2s}
-            options={fOpts.sol_l2s ?? []}
-            onChange={v => setF('sol_l2s', v)}
-          />
-        </div>
-        <div className="grid grid-cols-3 gap-3">
-          <MultiSelect
-            label="Team"
-            selected={filters.teams}
-            options={fOpts.teams ?? []}
-            onChange={v => setF('teams', v)}
-          />
-          <SearchMultiSelect
-            label="DSA"
-            selected={filters.dsas}
-            options={fOpts.dsas ?? []}
-            onChange={v => setF('dsas', v)}
-          />
-          <SearchMultiSelect
-            label="DVA"
-            selected={filters.dvas}
-            options={fOpts.dvas ?? []}
-            onChange={v => setF('dvas', v)}
-          />
-        </div>
-      </div>
-
-      {/* Cards */}
-      {isLoading ? (
-        <div className="text-sm text-sap-muted text-center py-16">Carregando...</div>
-      ) : bookings.length === 0 ? (
-        <div className="text-sm text-sap-muted text-center py-16">Nenhum resultado encontrado.</div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(bookings as Booking[]).map(b => (
-            <BookingCard key={b.opportunity_id} b={b} />
-          ))}
-        </div>
-      )}
+      {/* Shadow Opportunities tab */}
+      {activeTab === 'shadow' && <ShadowOppsTab fOpts={fOpts} />}
     </div>
   )
 }

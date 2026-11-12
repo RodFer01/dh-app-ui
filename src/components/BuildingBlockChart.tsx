@@ -65,16 +65,16 @@ export function BuildingBlockChart({
     [rows, fx, valueField]
   )
 
-  // Rows to show as cards (top N globally)
+  // Rows to show — top N globally (respects both page-level filters and TopN selector)
   const visibleRows = useMemo(
     () => (topN === 'Todos' ? sortedRows : sortedRows.slice(0, topN)),
     [sortedRows, topN]
   )
 
-  // Group ALL rows → category totals
+  // Group VISIBLE rows → block heights, totals, and cards all derived from the same set
   const allGroups = useMemo(() => {
     const g: Record<string, { total: number; count: number; rows: any[] }> = {}
-    for (const r of sortedRows) {
+    for (const r of visibleRows) {
       const k = String(r[groupBy] ?? 'Other')
       if (!g[k]) g[k] = { total: 0, count: 0, rows: [] }
       g[k].total += getAcv(r)
@@ -82,10 +82,7 @@ export function BuildingBlockChart({
       g[k].rows.push(r)
     }
     return g
-  }, [sortedRows, groupBy, fx, valueField])
-
-  // Which rows are visible per category
-  const visibleSet = useMemo(() => new Set(visibleRows.map(r => r.opportunity_id ?? r)), [visibleRows])
+  }, [visibleRows, groupBy, fx, valueField])
 
   // Sorted categories: fixed order, only CATEGORY_ORDER entries
   const categories = useMemo(

@@ -727,7 +727,6 @@ export default function PartnerAnalysisPage() {
             currency={currency}
             fx={fxRate}
             title={`Partner Pipeline — Building Block (${currency})`}
-            height={320}
           />
         </div>
       )}

@@ -159,39 +159,54 @@ export default function PipelineProgressionPage() {
     },
   })
 
-  // ── DRM evolution — line chart (ACV per DRM over time) ───────────────────────
+  // ── DRM evolution — stacked bar chart (ACV per DRM over time) ───────────────────────
   const evolutionOption = useMemo<EChartsOption>(() => {
-    const weeks = [...new Set(evolutionRows.map((r: any) => r.snapshot_week))].sort() as string[]
-    const cats  = [...new Set(evolutionRows.map((r: any) => r.drm_category))]
+    const filtered = evolutionRows.filter((r: any) => !EXCLUDED_DRMS.has(r.drm_category))
+    const weeks = [...new Set(filtered.map((r: any) => r.snapshot_week))].sort() as string[]
+    const cats  = [...new Set(filtered.map((r: any) => r.drm_category))]
       .sort((a: any, b: any) => DRM_ORDER.indexOf(a) - DRM_ORDER.indexOf(b)) as string[]
 
     const series = cats.map((cat) => {
       const byWeek: Record<string, number> = Object.fromEntries(
-        evolutionRows.filter((r: any) => r.drm_category === cat)
+        filtered.filter((r: any) => r.drm_category === cat)
           .map((r: any) => [r.snapshot_week, r.total_acv])
       )
       return {
         name: cat,
-        type: 'line' as const,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 5,
-        lineStyle: { width: 2, color: DRM_COLORS[cat] ?? '#8899aa' },
+        type: 'bar' as const,
+        stack: 'total',
         itemStyle: { color: DRM_COLORS[cat] ?? '#8899aa' },
-        data: weeks.map(w => +(byWeek[w] ?? 0).toFixed(0)),
+        label: { show: true, fontSize: 9, color: '#fff', formatter: (p: any) => p.value > 5000 ? moneyK(p.value) : '' },
+        data: weeks.map((w, i) => {
+          const curr = byWeek[w] ?? 0
+          const prev = i > 0 ? (byWeek[weeks[i - 1]] ?? 0) : null
+          const deltaPct = prev != null && prev > 0 ? ((curr - prev) / prev * 100) : null
+          return { value: +(curr.toFixed(0)), deltaPct }
+        }),
       }
     })
 
     return {
       tooltip: {
         trigger: 'axis',
-        formatter: (params: any[]) =>
-          `<b>${params[0]?.axisValue}</b><br/>` +
-          params.map(p => `${p.marker}${p.seriesName}: <b>${moneyK(p.value)}</b>`).join('<br/>'),
+        axisPointer: { type: 'shadow' },
+        formatter: (params: any[]) => {
+          const header = `<b>${formatWeek(params[0]?.axisValue)}</b><br/>`
+          const lines = params
+            .filter((p: any) => p.value > 0)
+            .map((p: any) => {
+              const pct = p.data?.deltaPct
+              const pctStr = pct != null
+                ? ` <span style="color:${pct >= 0 ? '#1a7f4b' : '#cc0000'}">(${pct > 0 ? '+' : ''}${pct.toFixed(0)}%)</span>`
+                : ''
+              return `${p.marker}${p.seriesName}: <b>${moneyK(p.value)}</b>${pctStr}`
+            })
+          return header + lines.join('<br/>')
+        },
       },
       legend: { data: cats, bottom: 0, textStyle: { fontSize: 11 } },
       grid: { left: 16, right: 16, top: 20, bottom: 48, containLabel: true },
-      xAxis: { type: 'category', data: weeks, axisLabel: { rotate: 30, fontSize: 11 } },
+      xAxis: { type: 'category', data: weeks, axisLabel: { rotate: 30, fontSize: 11, formatter: formatWeek } },
       yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#788fa6', formatter: (v: number) => moneyK(v) } },
       series,
     }

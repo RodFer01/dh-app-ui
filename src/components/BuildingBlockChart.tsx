@@ -100,8 +100,7 @@ export function BuildingBlockChart({
     [categories]
   )
 
-  const MAX_H = 520  // max block height in px
-  const MIN_H = 110  // min block height in px
+  const BLOCK_H = 520  // fixed height for all blocks
 
   if (!rows.length) return null
 
@@ -136,8 +135,7 @@ export function BuildingBlockChart({
       {/* Building blocks — top aligned */}
       <div className="flex gap-1.5 items-start">
         {categories.map(([cat, { total, count, rows: catRows }]) => {
-          const pct = total / maxAcv
-          const blockH = Math.max(MIN_H, Math.round(pct * MAX_H))
+          const blockH = BLOCK_H
           const color = DRM_COLORS[cat] ?? DEFAULT_COLOR
           const catVisibleRows = catRows.filter(r =>
             visibleSet.has(r.opportunity_id ?? r)

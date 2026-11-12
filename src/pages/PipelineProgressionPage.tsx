@@ -38,8 +38,7 @@ const formatWeek = (w: string) => {
 const fetch = (url: string, params: Record<string, any> = {}) =>
   api.get(url, { params }).then(r => r.data)
 
-const moneyK = (v: number | null | undefined) =>
-  v == null ? '—' : `$${(v / 1000).toFixed(0)}K`
+const moneyK = (v: number | null | undefined) => formatAcvK(v, 'USD')
 
 // Extract params supported by past_pipeline from the full filter set
 function ppParams(p: Record<string, any>, extras: Record<string, any> = {}): Record<string, any> {

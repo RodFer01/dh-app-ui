@@ -131,7 +131,7 @@ function ProductChips({ lines, matchedSet, showAcv }: { lines: any[]; matchedSet
     <div className="flex flex-col gap-1">
       {lines.map((l: any, i: number) => {
         const name = l.eng || l.sol_l2 || '—'
-        const isMatch = matchedSet ? matchedSet.has(name) : false
+        const isMatch = matchedSet ? (matchedSet.has(name) || matchedSet.has(l.sol_l2)) : false
         return (
           <span key={i} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight ${isMatch ? 'bg-blue-100 text-blue-800 border border-blue-300' : 'bg-gray-100 text-gray-700'}`}>
             {name}

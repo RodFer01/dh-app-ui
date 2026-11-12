@@ -4,26 +4,28 @@ import { useMemo, useState } from 'react'
 type ColorDef = { bg: string; text: string; badge: string }
 
 const DRM_COLORS: Record<string, ColorDef> = {
-  'Committed':              { bg: '#0070f2', text: '#fff',    badge: '#fff3' },
-  'Probable':               { bg: '#4cb1ff', text: '#fff',    badge: '#fff3' },
-  'Upside':                 { bg: '#f0ab00', text: '#fff',    badge: '#fff3' },
-  'Partner Upside':         { bg: '#e6b800', text: '#fff',    badge: '#fff3' },
-  'Partner Forecasted':     { bg: '#7b9ec7', text: '#fff',    badge: '#fff3' },
-  'Exclude from Pipeline':  { bg: '#556b82', text: '#fff',    badge: '#fff3' },
-  'Disc/Lost':              { bg: '#aa0808', text: '#fff',    badge: '#fff3' },
-  'Booked/Won':             { bg: '#256f3a', text: '#fff',    badge: '#fff3' },
-  'Pipeline':               { bg: '#6b8499', text: '#fff',    badge: '#fff3' },
-  'Omit':                   { bg: '#c04040', text: '#fff',    badge: '#fff3' },
-  'Digital':                { bg: '#0070f2', text: '#fff',    badge: '#fff3' },
-  'Field':                  { bg: '#4cb1ff', text: '#fff',    badge: '#fff3' },
-  'No Engagement':          { bg: '#8899aa', text: '#fff',    badge: '#fff3' },
+  'Committed':              { bg: '#0070f2', text: '#fff', badge: '#fff3' },
+  'Probable':               { bg: '#4cb1ff', text: '#fff', badge: '#fff3' },
+  'Upside':                 { bg: '#f0ab00', text: '#fff', badge: '#fff3' },
+  'Partner Upside':         { bg: '#e6b800', text: '#fff', badge: '#fff3' },
+  'Partner Forecasted':     { bg: '#7b9ec7', text: '#fff', badge: '#fff3' },
+  'Exclude from Pipeline':  { bg: '#556b82', text: '#fff', badge: '#fff3' },
+  'Disc/Lost':              { bg: '#aa0808', text: '#fff', badge: '#fff3' },
+  'Booked/Won':             { bg: '#256f3a', text: '#fff', badge: '#fff3' },
+  'Pipeline':               { bg: '#6b8499', text: '#fff', badge: '#fff3' },
+  'Omit':                   { bg: '#c04040', text: '#fff', badge: '#fff3' },
+  'Digital':                { bg: '#0070f2', text: '#fff', badge: '#fff3' },
+  'Field':                  { bg: '#4cb1ff', text: '#fff', badge: '#fff3' },
+  'No Engagement':          { bg: '#8899aa', text: '#fff', badge: '#fff3' },
 }
 const DEFAULT_COLOR: ColorDef = { bg: '#788fa6', text: '#fff', badge: '#fff3' }
 
 const TOP_N_OPTIONS: Array<number | 'Todos'> = [10, 20, 40, 'Todos']
 
-// Only these categories are shown, in this fixed order
+// Only these categories shown, in this fixed order
 const CATEGORY_ORDER = ['Booked/Won', 'Committed', 'Probable', 'Upside']
+
+const BLOCK_H = 520
 
 function fmtAcv(v: number, sym = '$'): string {
   if (v == null) return '—'
@@ -59,20 +61,20 @@ export function BuildingBlockChart({
     return raw * fx
   }
 
-  // Sort all rows by ACV desc
+  // All rows sorted by ACV desc
   const sortedRows = useMemo(
     () => [...rows].sort((a, b) => getAcv(b) - getAcv(a)),
     [rows, fx, valueField]
   )
 
-  // Rows to show — top N globally (respects both page-level filters and TopN selector)
+  // Top N slice — drives both block sizes and cards (filters fully applied)
   const visibleRows = useMemo(
     () => (topN === 'Todos' ? sortedRows : sortedRows.slice(0, topN)),
     [sortedRows, topN]
   )
 
-  // Group VISIBLE rows → block heights, totals, and cards all derived from the same set
-  const allGroups = useMemo(() => {
+  // Groups derived from visibleRows — totals, counts, and card lists are all consistent
+  const groups = useMemo(() => {
     const g: Record<string, { total: number; count: number; rows: any[] }> = {}
     for (const r of visibleRows) {
       const k = String(r[groupBy] ?? 'Other')
@@ -84,26 +86,23 @@ export function BuildingBlockChart({
     return g
   }, [visibleRows, groupBy, fx, valueField])
 
-  // Sorted categories: fixed order, only CATEGORY_ORDER entries
   const categories = useMemo(
     () => CATEGORY_ORDER
-      .filter(cat => allGroups[cat])
-      .map(cat => [cat, allGroups[cat]] as [string, { total: number; count: number; rows: any[] }]),
-    [allGroups]
+      .filter(cat => groups[cat])
+      .map(cat => [cat, groups[cat]] as [string, { total: number; count: number; rows: any[] }]),
+    [groups]
   )
-
-  const BLOCK_H = 520  // fixed height for all blocks
 
   if (!rows.length) return null
 
   return (
     <div className="bg-white rounded border p-4 mt-2">
-      {/* Header row */}
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div>
           <div className="text-[13px] font-bold text-sap-text">{title}</div>
           <div className="text-[10px] text-sap-muted mt-0.5">
-            Distribuição por categoria · tamanho proporcional ao ACV · {sortedRows.length} oportunidades
+            Distribuição por categoria · {visibleRows.length} de {sortedRows.length} oportunidades
           </div>
         </div>
         <div className="flex items-center gap-1">
@@ -124,21 +123,15 @@ export function BuildingBlockChart({
         </div>
       </div>
 
-      {/* Building blocks — top aligned */}
+      {/* Building blocks — top aligned, equal height */}
       <div className="flex gap-1.5 items-start">
         {categories.map(([cat, { total, count, rows: catRows }]) => {
-          const blockH = BLOCK_H
           const color = DRM_COLORS[cat] ?? DEFAULT_COLOR
-          const catVisibleRows = catRows.filter(r =>
-            visibleSet.has(r.opportunity_id ?? r)
-          )
-          const hiddenCount = count - catVisibleRows.length
-
           return (
             <div
               key={cat}
               className="flex-1 min-w-0 rounded-lg overflow-hidden flex flex-col"
-              style={{ height: blockH, backgroundColor: color.bg }}
+              style={{ height: BLOCK_H, backgroundColor: color.bg }}
             >
               {/* Category header */}
               <div className="px-2.5 pt-2 pb-1 shrink-0 border-b border-white/20">
@@ -147,12 +140,10 @@ export function BuildingBlockChart({
                 <div className="text-[9px] text-white/60">{count} opp{count !== 1 ? 's' : ''}</div>
               </div>
 
-              {/* Opp cards (scrollable) */}
+              {/* Opp cards — scrollable */}
               <div className="flex-1 overflow-y-auto px-1.5 py-1 space-y-1">
-                {catVisibleRows.map((r: any, i: number) => {
+                {catRows.map((r: any, i: number) => {
                   const acv = getAcv(r)
-                  const cat2 = String(r[groupBy] ?? '')
-                  const c2 = DRM_COLORS[cat2] ?? DEFAULT_COLOR
                   return (
                     <div
                       key={r.opportunity_id ?? i}
@@ -166,32 +157,18 @@ export function BuildingBlockChart({
                         >
                           {r.account_name || '—'}
                         </div>
-                        <div
-                          className="text-[11px] font-black shrink-0"
-                          style={{ color: '#fff' }}
-                        >
+                        <div className="text-[11px] font-black shrink-0" style={{ color: '#fff' }}>
                           {fmtAcv(acv, sym)}
                         </div>
                       </div>
                       {r.opp_description && (
-                        <div
-                          className="text-[8px] mt-0.5 truncate"
-                          style={{ color: 'rgba(255,255,255,0.65)' }}
-                        >
+                        <div className="text-[8px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.65)' }}>
                           {r.opp_description}
                         </div>
                       )}
                     </div>
                   )
                 })}
-                {hiddenCount > 0 && (
-                  <div
-                    className="text-[9px] text-center py-0.5 font-medium"
-                    style={{ color: 'rgba(255,255,255,0.55)' }}
-                  >
-                    +{hiddenCount} mais
-                  </div>
-                )}
               </div>
             </div>
           )

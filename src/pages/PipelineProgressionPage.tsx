@@ -511,18 +511,19 @@ export default function PipelineProgressionPage() {
       {/* Stalled pipeline */}
       <div>
         <SectionLabel>Stalled Pipeline (&gt;21 days unchanged)</SectionLabel>
-        <div className={selectedOpp ? 'flex gap-4 items-start mt-2' : 'mt-2'} style={selectedOpp ? { minHeight: 'calc(100vh - 140px)' } : {}}>
-          <div className={selectedOpp ? 'flex-1 min-w-0' : ''}>
-            <DataTable rows={stalledRows} cols={stalledCols} height={selectedOpp ? 480 : 380} onRowClick={handleSelectOpp} />
+        <div className={selectedFrom === 'stalled' && selectedOpp ? 'flex gap-4 items-start mt-2' : 'mt-2'}
+          style={selectedFrom === 'stalled' && selectedOpp ? { minHeight: 'calc(100vh - 140px)' } : {}}>
+          <div className={selectedFrom === 'stalled' && selectedOpp ? 'flex-1 min-w-0' : ''}>
+            <DataTable rows={stalledRows} cols={stalledCols} height={selectedFrom === 'stalled' && selectedOpp ? 480 : 380} onRowClick={handleSelectOpp} />
           </div>
-          {selectedOpp && (
+          {selectedFrom === 'stalled' && selectedOpp && (
             <div className="w-[62%] flex-shrink-0 sticky top-4">
               <OppDetailPanel
                 opp={selectedOpp}
                 noteForm={noteForm}
                 setNoteForm={setNoteForm}
                 saveMut={saveMut}
-                onClose={() => setSelectedOpp(null)}
+                onClose={() => { setSelectedOpp(null); setSelectedFrom(null) }}
                 currency={currency}
                 fx={fx}
               />

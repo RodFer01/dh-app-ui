@@ -95,11 +95,6 @@ export function BuildingBlockChart({
     [allGroups]
   )
 
-  const maxAcv = useMemo(
-    () => Math.max(...categories.map(([, v]) => v.total), 1),
-    [categories]
-  )
-
   const BLOCK_H = 520  // fixed height for all blocks
 
   if (!rows.length) return null

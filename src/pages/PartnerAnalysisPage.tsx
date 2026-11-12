@@ -18,6 +18,7 @@ import { oppIdCol } from '../components/OppIdCol'
 import { useAuth } from '../context/AuthContext'
 import { formatAcvK } from '../lib/utils'
 import api from '../lib/api'
+import { BuildingBlockChart } from '../components/BuildingBlockChart'
 import { OppDetailPanel, BLANK_NOTE_FORM } from '../components/OppDetailPanel'
 
 const DRM_COLORS: Record<string, string> = {
@@ -714,6 +715,22 @@ export default function PartnerAnalysisPage() {
           </div>
         </div>
       </CollapsibleFrame>
+
+      {/* Building Block — partner opps by DRM */}
+      {canFetchOpps && partnerOppRows.length > 0 && (
+        <div className="mb-4">
+          <SectionLabel>Pipeline Building Block — by DRM Category</SectionLabel>
+          <BuildingBlockChart
+            rows={partnerOppRows}
+            groupBy="drm_category"
+            valueField="acv_total_opp"
+            currency={currency}
+            fx={fxRate}
+            title={`Partner Pipeline — Building Block (${currency})`}
+            height={320}
+          />
+        </div>
+      )}
 
       {/* Partner Opportunity Table */}
       <div>

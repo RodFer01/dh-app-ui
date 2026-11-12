@@ -22,6 +22,9 @@ const DEFAULT_COLOR: ColorDef = { bg: '#788fa6', text: '#fff', badge: '#fff3' }
 
 const TOP_N_OPTIONS: Array<number | 'Todos'> = [10, 20, 40, 'Todos']
 
+// Only these categories are shown, in this fixed order
+const CATEGORY_ORDER = ['Booked/Won', 'Committed', 'Probable', 'Upside']
+
 function fmtAcv(v: number, sym = '$'): string {
   if (v == null) return '—'
   if (v >= 1e6) return `${sym}${(v / 1e6).toFixed(2)}Mi`
@@ -84,9 +87,11 @@ export function BuildingBlockChart({
   // Which rows are visible per category
   const visibleSet = useMemo(() => new Set(visibleRows.map(r => r.opportunity_id ?? r)), [visibleRows])
 
-  // Sorted categories (ascending ACV so smallest block is leftmost)
+  // Sorted categories: fixed order, only CATEGORY_ORDER entries
   const categories = useMemo(
-    () => Object.entries(allGroups).sort((a, b) => a[1].total - b[1].total),
+    () => CATEGORY_ORDER
+      .filter(cat => allGroups[cat])
+      .map(cat => [cat, allGroups[cat]] as [string, { total: number; count: number; rows: any[] }]),
     [allGroups]
   )
 

@@ -125,6 +125,24 @@ const SHADOW_DRM_COLOR: Record<string, string> = {
   'Partner Forecasted':     'bg-amber-100 text-amber-700',
 }
 
+function ProductChips({ lines, matchedSet, showAcv }: { lines: any[]; matchedSet?: Set<string>; showAcv?: boolean }) {
+  if (!lines || lines.length === 0) return <span className="text-sap-muted text-[11px]">—</span>
+  return (
+    <div className="flex flex-col gap-1">
+      {lines.map((l: any, i: number) => {
+        const name = l.eng || l.sol_l2 || '—'
+        const isMatch = matchedSet ? matchedSet.has(name) : false
+        return (
+          <span key={i} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight ${isMatch ? 'bg-blue-100 text-blue-800 border border-blue-300' : 'bg-gray-100 text-gray-700'}`}>
+            {name}
+            {showAcv && l.acv > 0 && <span className="opacity-70 font-normal ml-0.5">{fmtCurrency(l.acv)}</span>}
+          </span>
+        )
+      })}
+    </div>
+  )
+}
+
 function ShadowOppsTab({ fOpts }: { fOpts: any }) {
   const qc = useQueryClient()
   const [sf, setSf] = useState({ closing_qtrs: [] as string[], regions: [] as string[], sol_l1s: [] as string[] })
@@ -138,6 +156,14 @@ function ShadowOppsTab({ fOpts }: { fOpts: any }) {
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ['shadow-opps', sf],
     queryFn: () => api.get(`/api/pipeline/bookings/shadow-opps?${sfParams}`).then(r => r.data),
+  })
+
+  const allOppIds = Array.from(new Set(rows.flatMap((r: any) => [r.closed_opp_id, r.shadow_opp_id])))
+
+  const { data: linesMap = {} } = useQuery({
+    queryKey: ['opp-lines-shadow', allOppIds],
+    queryFn: () => api.post('/api/pipeline/bookings/opp-lines', { opp_ids: allOppIds }).then(r => r.data),
+    enabled: allOppIds.length > 0,
   })
 
   const { data: savedComments = {} } = useQuery({
@@ -156,7 +182,6 @@ function ShadowOppsTab({ fOpts }: { fOpts: any }) {
 
   return (
     <div>
-      {/* Shadow filters */}
       <div className="bg-white border border-sap-border rounded-xl p-4 mb-4 flex gap-3">
         <MultiSelect label="Quarter"     selected={sf.closing_qtrs} options={fOpts.closing_qtrs ?? []} onChange={v => setSf(p => ({...p, closing_qtrs: v}))} />
         <MultiSelect label="Região"      selected={sf.regions}      options={fOpts.regions ?? []}      onChange={v => setSf(p => ({...p, regions: v}))} />
@@ -174,16 +199,18 @@ function ShadowOppsTab({ fOpts }: { fOpts: any }) {
               <tr className="bg-[#f0f4f8] text-[11px] font-semibold uppercase tracking-wide text-[#556b82]">
                 <th className="p-2 text-left border-b border-sap-border">Opp Fechada</th>
                 <th className="p-2 text-left border-b">Conta</th>
-                <th className="p-2 text-left border-b">Descrição (fechada)</th>
-                <th className="p-2 text-left border-b">Sol L1</th>
+                <th className="p-2 text-left border-b">Descrição</th>
+                <th className="p-2 text-left border-b">DRM</th>
                 <th className="p-2 text-right border-b">ACV Fechado</th>
+                <th className="p-2 text-left border-b">Produtos vendidos</th>
                 <th className="p-2 text-left border-b border-l-2 border-l-sap-blue">Opp Shadow</th>
-                <th className="p-2 text-left border-b">Descrição (shadow)</th>
-                <th className="p-2 text-left border-b">DRM Shadow</th>
+                <th className="p-2 text-left border-b">Descrição</th>
+                <th className="p-2 text-left border-b">DRM</th>
+                <th className="p-2 text-left border-b">Produtos da Opp</th>
                 <th className="p-2 text-left border-b">DSA no VAT</th>
                 <th className="p-2 text-right border-b">ACV Shadow</th>
                 <th className="p-2 text-center border-b">Incluir</th>
-                <th className="p-2 text-left border-b">Por quê incluir</th>
+                <th className="p-2 text-left border-b">Motivo</th>
               </tr>
             </thead>
             <tbody>
@@ -192,22 +219,31 @@ function ShadowOppsTab({ fOpts }: { fOpts: any }) {
                 const saved = getSaved(row)
                 const included = !!saved.corregir
                 const commentVal = localComments[key] ?? saved.comment ?? ''
+                const closedLines = (linesMap as any)[row.closed_opp_id] ?? []
+                const shadowLines = (linesMap as any)[row.shadow_opp_id] ?? []
+                const matchedSet = new Set((row.matched_products || '').split(' | ').filter(Boolean))
                 return (
-                  <tr key={key} className={`border-b border-sap-border ${included ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
-                    <td className="p-2 font-mono text-[11px] text-sap-blue">{row.closed_opp_id}</td>
-                    <td className="p-2 font-medium">{row.account_name}</td>
-                    <td className="p-2 text-sap-muted max-w-[160px]"><div className="line-clamp-2">{row.closed_description}</div></td>
-                    <td className="p-2">{row.closed_sol_l1}</td>
-                    <td className="p-2 text-right font-semibold">{fmtCurrency(row.closed_acv)}</td>
-                    <td className="p-2 font-mono text-[11px] text-sap-blue border-l-2 border-l-sap-blue">{row.shadow_opp_id}</td>
-                    <td className="p-2 text-sap-muted max-w-[160px]"><div className="line-clamp-2">{row.shadow_description}</div></td>
-                    <td className="p-2">
+                  <tr key={key} className={`border-b border-sap-border align-top ${included ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
+                    <td className="p-2 font-mono text-[11px] text-sap-blue whitespace-nowrap">{row.closed_opp_id}</td>
+                    <td className="p-2 font-medium max-w-[120px]"><div className="line-clamp-2">{row.account_name}</div></td>
+                    <td className="p-2 text-sap-muted max-w-[140px]"><div className="line-clamp-2">{row.closed_description}</div></td>
+                    <td className="p-2 whitespace-nowrap">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.closed_drm] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {row.closed_drm}
+                      </span>
+                    </td>
+                    <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtCurrency(row.closed_acv)}</td>
+                    <td className="p-2 max-w-[180px]"><ProductChips lines={closedLines} showAcv /></td>
+                    <td className="p-2 font-mono text-[11px] text-sap-blue border-l-2 border-l-sap-blue whitespace-nowrap">{row.shadow_opp_id}</td>
+                    <td className="p-2 text-sap-muted max-w-[140px]"><div className="line-clamp-2">{row.shadow_description}</div></td>
+                    <td className="p-2 whitespace-nowrap">
                       <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.shadow_drm] ?? 'bg-gray-100 text-gray-600'}`}>
                         {row.shadow_drm}
                       </span>
                     </td>
-                    <td className="p-2 text-sap-muted">{row.shadow_vat_dh || '—'}</td>
-                    <td className="p-2 text-right font-semibold">{fmtCurrency(row.shadow_acv)}</td>
+                    <td className="p-2 max-w-[180px]"><ProductChips lines={shadowLines} matchedSet={matchedSet} /></td>
+                    <td className="p-2 text-sap-muted whitespace-nowrap">{row.shadow_vat_dh || '—'}</td>
+                    <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtCurrency(row.shadow_acv)}</td>
                     <td className="p-2 text-center">
                       <button
                         onClick={() => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: commentVal, corregir: included ? 0 : 1 })}

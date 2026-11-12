@@ -671,7 +671,6 @@ export function OpportunityListPage() {
           currency={currency}
           fx={fxRate}
           title={`Pipeline Building Block (${currency})`}
-          height={360}
         />
       </div>
 

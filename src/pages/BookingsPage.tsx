@@ -145,7 +145,7 @@ function ProductChips({ lines, matchedSet, showAcv }: { lines: any[]; matchedSet
 
 function ShadowOppsTab({ fOpts }: { fOpts: any }) {
   const qc = useQueryClient()
-  const [sf, setSf] = useState({ closing_qtrs: [] as string[], regions: [] as string[], sol_l1s: [] as string[] })
+  const [sf, setSf] = useState({ closing_qtrs: [] as string[], regions: [] as string[], sol_l1s: [] as string[], dsas: [] as string[] })
   const [localComments, setLocalComments] = useState<Record<string, string>>({})
 
   const sfParams = new URLSearchParams()
@@ -158,7 +158,15 @@ function ShadowOppsTab({ fOpts }: { fOpts: any }) {
     queryFn: () => api.get(`/api/pipeline/bookings/shadow-opps?${sfParams}`).then(r => r.data),
   })
 
-  const allOppIds = Array.from(new Set(rows.flatMap((r: any) => [r.closed_opp_id, r.shadow_opp_id])))
+  const dsaOptions = Array.from(new Set(
+    rows.flatMap((r: any) => parsePeople(r.shadow_vat_dh))
+  )).sort() as string[]
+
+  const filteredRows = sf.dsas.length === 0 ? rows : rows.filter((r: any) =>
+    parsePeople(r.shadow_vat_dh).some((d: string) => sf.dsas.includes(d))
+  )
+
+  const allOppIds = Array.from(new Set(filteredRows.flatMap((r: any) => [r.closed_opp_id, r.shadow_opp_id])))
 
   const { data: linesMap = {} } = useQuery({
     queryKey: ['opp-lines-shadow', allOppIds],
@@ -180,105 +188,141 @@ function ShadowOppsTab({ fOpts }: { fOpts: any }) {
   const getKey = (row: any) => `${row.closed_opp_id}|${row.shadow_opp_id}`
   const getSaved = (row: any) => savedComments[getKey(row)] ?? { comment: '', corregir: 0 }
 
+  const thCls = "px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-sap-muted border-b border-sap-border bg-[#f8f9fa] whitespace-nowrap text-left"
+  const tdCls = "px-3 py-2.5 text-[12px] text-sap-text border-b border-sap-border/40 align-top"
+
+  const hasFilters = sf.closing_qtrs.length > 0 || sf.regions.length > 0 || sf.sol_l1s.length > 0 || sf.dsas.length > 0
+
   return (
     <div>
-      <div className="bg-white border border-sap-border rounded-xl p-4 mb-4 flex gap-3">
+      <div className="bg-white border border-sap-border rounded-xl p-4 mb-4 flex flex-wrap gap-3 items-center">
         <MultiSelect label="Quarter"     selected={sf.closing_qtrs} options={fOpts.closing_qtrs ?? []} onChange={v => setSf(p => ({...p, closing_qtrs: v}))} />
         <MultiSelect label="Região"      selected={sf.regions}      options={fOpts.regions ?? []}      onChange={v => setSf(p => ({...p, regions: v}))} />
         <MultiSelect label="Solution L1" selected={sf.sol_l1s}      options={fOpts.sol_l1s ?? []}      onChange={v => setSf(p => ({...p, sol_l1s: v}))} />
+        {dsaOptions.length > 0 && (
+          <SearchMultiSelect label="DSA" selected={sf.dsas} options={dsaOptions} onChange={v => setSf(p => ({...p, dsas: v}))} />
+        )}
+        {hasFilters && (
+          <button onClick={() => setSf({ closing_qtrs: [], regions: [], sol_l1s: [], dsas: [] })} className="text-[12px] text-sap-blue hover:underline">
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       {isLoading ? (
         <div className="text-sm text-sap-muted text-center py-16">Carregando...</div>
-      ) : rows.length === 0 ? (
+      ) : filteredRows.length === 0 ? (
         <div className="text-sm text-sap-muted text-center py-16">Nenhum resultado encontrado.</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-[12px] border-collapse">
-            <thead>
-              <tr className="bg-[#f0f4f8] text-[11px] font-semibold uppercase tracking-wide text-[#556b82]">
-                <th className="p-2 text-left border-b border-sap-border">Opp Fechada</th>
-                <th className="p-2 text-left border-b">Conta</th>
-                <th className="p-2 text-left border-b">Descrição</th>
-                <th className="p-2 text-left border-b">DRM</th>
-                <th className="p-2 text-right border-b">ACV</th>
-                <th className="p-2 text-left border-b border-l-2 border-l-sap-blue">Opp c/ DSA</th>
-                <th className="p-2 text-left border-b">Descrição</th>
-                <th className="p-2 text-left border-b">DRM</th>
-                <th className="p-2 text-left border-b">DSA no VAT</th>
-                <th className="p-2 text-right border-b">ACV</th>
-                <th className="p-2 text-center border-b">Incluir</th>
-                <th className="p-2 text-left border-b">Motivo</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row: any) => {
-                const key = getKey(row)
-                const saved = getSaved(row)
-                const included = !!saved.corregir
-                const commentVal = localComments[key] ?? saved.comment ?? ''
-                const closedLines = (linesMap as any)[row.closed_opp_id] ?? []
-                const shadowLines = (linesMap as any)[row.shadow_opp_id] ?? []
-                const matchedSet = new Set((row.matched_products || '').split(' | ').filter(Boolean))
-                const rowCls = included ? 'bg-green-50' : 'hover:bg-gray-50'
-                return (
-                  <>
-                    {/* Main row */}
-                    <tr key={key} className={`border-b border-sap-border/50 align-top ${rowCls}`}>
-                      <td className="p-2 font-mono text-[11px] text-sap-blue whitespace-nowrap">{row.closed_opp_id}</td>
-                      <td className="p-2 font-medium max-w-[130px]"><div className="line-clamp-2">{row.account_name}</div></td>
-                      <td className="p-2 text-sap-muted max-w-[150px]"><div className="line-clamp-2">{row.closed_description}</div></td>
-                      <td className="p-2 whitespace-nowrap">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.closed_drm] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {row.closed_drm}
-                        </span>
-                      </td>
-                      <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtCurrency(row.closed_acv)}</td>
-                      <td className="p-2 font-mono text-[11px] text-sap-blue border-l-2 border-l-sap-blue whitespace-nowrap">{row.shadow_opp_id}</td>
-                      <td className="p-2 text-sap-muted max-w-[150px]"><div className="line-clamp-2">{row.shadow_description}</div></td>
-                      <td className="p-2 whitespace-nowrap">
-                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.shadow_drm] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {row.shadow_drm}
-                        </span>
-                      </td>
-                      <td className="p-2 text-sap-muted whitespace-nowrap text-[11px]">{row.shadow_vat_dh || '—'}</td>
-                      <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtCurrency(row.shadow_acv)}</td>
-                      <td className="p-2 text-center">
-                        <button
-                          onClick={() => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: commentVal, corregir: included ? 0 : 1 })}
-                          className={`px-2 py-1 rounded text-[11px] font-semibold border transition-colors ${included ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-gray-300 text-gray-600 hover:border-sap-blue hover:text-sap-blue'}`}
-                        >
-                          {included ? 'Incluído' : 'Incluir'}
-                        </button>
-                      </td>
-                      <td className="p-2">
-                        <textarea
-                          className="w-full min-w-[120px] text-[11px] border border-sap-border rounded p-1 resize-none bg-transparent focus:outline-none focus:border-sap-blue"
-                          rows={2}
-                          maxLength={200}
-                          placeholder="Motivo..."
-                          value={commentVal}
-                          onChange={e => setLocalComments(p => ({...p, [key]: e.target.value}))}
-                          onBlur={e => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: e.target.value, corregir: saved.corregir })}
-                        />
-                      </td>
-                    </tr>
-                    {/* Products sub-row */}
-                    <tr key={`${key}-products`} className={`border-b border-sap-border align-top ${rowCls}`}>
-                      <td colSpan={5} className="px-2 pb-2 pt-0">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Produtos vendidos</div>
-                        <ProductChips lines={closedLines} showAcv />
-                      </td>
-                      <td colSpan={7} className="px-2 pb-2 pt-0 border-l-2 border-l-sap-blue">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Produtos da opp com DSA <span className="text-blue-500">(destacados = match)</span></div>
-                        <ProductChips lines={shadowLines} matchedSet={matchedSet} />
-                      </td>
-                    </tr>
-                  </>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="bg-white border border-sap-border rounded-xl overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-sap-border bg-[#f8f9fa]">
+            <span className="text-[11px] font-semibold text-sap-muted uppercase tracking-wide">{filteredRows.length} par(es) encontrado(s)</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className={thCls}>Opp Fechada</th>
+                  <th className={thCls}>Conta</th>
+                  <th className={thCls}>DRM</th>
+                  <th className={`${thCls} text-right`}>ACV</th>
+                  <th className={`${thCls} border-l-2 border-l-sap-blue`}>Opp c/ DSA</th>
+                  <th className={thCls}>Conta / Descrição</th>
+                  <th className={thCls}>DRM</th>
+                  <th className={`${thCls} text-right`}>ACV</th>
+                  <th className={thCls}>Digital SA no VAT</th>
+                  <th className={`${thCls} text-center`}>Incluir</th>
+                  <th className={thCls}>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredRows.map((row: any) => {
+                  const key = getKey(row)
+                  const saved = getSaved(row)
+                  const included = !!saved.corregir
+                  const commentVal = localComments[key] ?? saved.comment ?? ''
+                  const closedLines = (linesMap as any)[row.closed_opp_id] ?? []
+                  const shadowLines = (linesMap as any)[row.shadow_opp_id] ?? []
+                  const matchedSet = new Set((row.matched_products || '').split(' | ').filter(Boolean))
+                  const dsaPeople = parsePeople(row.shadow_vat_dh)
+                  const rowBg = included ? 'bg-green-50' : 'hover:bg-[#f8fbff]'
+                  return (
+                    <>
+                      <tr key={key} className={`${rowBg} transition-colors`}>
+                        <td className={tdCls}>
+                          <span className="font-mono text-[11px] text-sap-blue font-semibold">{row.closed_opp_id}</span>
+                          <div className="text-[11px] text-sap-muted mt-0.5 max-w-[150px] truncate">{row.closed_description}</div>
+                        </td>
+                        <td className={tdCls}>
+                          <div className="font-medium max-w-[140px] truncate">{row.account_name}</div>
+                          <div className="text-[11px] text-sap-muted mt-0.5">{row.closing_qtr}</div>
+                        </td>
+                        <td className={`${tdCls} whitespace-nowrap`}>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.closed_drm] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {row.closed_drm}
+                          </span>
+                        </td>
+                        <td className={`${tdCls} text-right font-semibold tabular-nums whitespace-nowrap`}>{fmtCurrency(row.closed_acv)}</td>
+
+                        <td className={`${tdCls} border-l-2 border-l-sap-blue`}>
+                          <span className="font-mono text-[11px] text-sap-blue font-semibold">{row.shadow_opp_id}</span>
+                          <div className="text-[11px] text-sap-muted mt-0.5 max-w-[150px] truncate">{row.shadow_description}</div>
+                        </td>
+                        <td className={tdCls}>
+                          <div className="font-medium max-w-[140px] truncate">{row.account_name}</div>
+                          <div className="text-[11px] text-sap-muted mt-0.5">{row.shadow_closing_qtr}</div>
+                        </td>
+                        <td className={`${tdCls} whitespace-nowrap`}>
+                          <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.shadow_drm] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {row.shadow_drm || row.shadow_phase}
+                          </span>
+                        </td>
+                        <td className={`${tdCls} text-right font-semibold tabular-nums whitespace-nowrap`}>{fmtCurrency(row.shadow_acv)}</td>
+
+                        <td className={tdCls}>
+                          <div className="flex flex-wrap gap-1">
+                            {dsaPeople.length > 0
+                              ? dsaPeople.map((p: string) => <PersonBadge key={p} name={p} />)
+                              : <span className="text-sap-muted text-[11px]">—</span>}
+                          </div>
+                        </td>
+
+                        <td className={`${tdCls} text-center`}>
+                          <button
+                            onClick={() => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: commentVal, corregir: included ? 0 : 1 })}
+                            className={`px-2.5 py-1 rounded text-[11px] font-semibold border transition-colors ${included ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-gray-300 text-gray-600 hover:border-sap-blue hover:text-sap-blue'}`}
+                          >
+                            {included ? 'Incluído' : 'Incluir'}
+                          </button>
+                        </td>
+                        <td className={tdCls}>
+                          <textarea
+                            className="w-full min-w-[110px] text-[11px] border border-sap-border rounded p-1 resize-none bg-transparent focus:outline-none focus:border-sap-blue"
+                            rows={2} maxLength={200} placeholder="Motivo..."
+                            value={commentVal}
+                            onChange={e => setLocalComments(p => ({...p, [key]: e.target.value}))}
+                            onBlur={e => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: e.target.value, corregir: saved.corregir })}
+                          />
+                        </td>
+                      </tr>
+                      <tr key={`${key}-p`} className={`${rowBg} transition-colors`}>
+                        <td colSpan={4} className="px-3 pb-3 pt-1 border-b border-sap-border">
+                          <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Produtos fechados</div>
+                          <ProductChips lines={closedLines} showAcv />
+                        </td>
+                        <td colSpan={7} className="px-3 pb-3 pt-1 border-b border-sap-border border-l-2 border-l-sap-blue">
+                          <div className="text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">
+                            Produtos da opp com DSA <span className="text-blue-400 normal-case font-normal">— destacados = match</span>
+                          </div>
+                          <ProductChips lines={shadowLines} matchedSet={matchedSet} />
+                        </td>
+                      </tr>
+                    </>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

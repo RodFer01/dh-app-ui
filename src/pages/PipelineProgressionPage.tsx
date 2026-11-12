@@ -159,6 +159,15 @@ export default function PipelineProgressionPage() {
     },
   })
 
+  // DRM KPIs for selected/latest snapshot (computed from evolutionRows — no extra API call)
+  const drmKpis = useMemo(() => {
+    const week = snapshotWeek || weekOptions[0] || ''
+    if (!week) return []
+    return evolutionRows
+      .filter((r: any) => r.snapshot_week === week)
+      .sort((a: any, b: any) => DRM_ORDER.indexOf(a.drm_category) - DRM_ORDER.indexOf(b.drm_category))
+  }, [evolutionRows, snapshotWeek, weekOptions])
+
   // ── DRM evolution — stacked bar chart (ACV per DRM over time) ───────────────────────
   const evolutionOption = useMemo<EChartsOption>(() => {
     const filtered = evolutionRows.filter((r: any) => !EXCLUDED_DRMS.has(r.drm_category))
@@ -338,6 +347,31 @@ export default function PipelineProgressionPage() {
           color={summary?.delta_acv_pct > 0 ? 'green' : summary?.delta_acv_pct < 0 ? 'red' : 'grey'}
         />
       </div>
+
+      {/* DRM breakdown KPIs */}
+      {drmKpis.length > 0 && (
+        <div>
+          <SectionLabel>Pipeline by DRM — {formatWeek(snapshotWeek || weekOptions[0] || '')}</SectionLabel>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mt-2">
+            {drmKpis.map((d: any) => {
+              const color =
+                d.drm_category === 'Committed' ? 'blue' :
+                d.drm_category === 'Probable'  ? 'orange' :
+                d.drm_category === 'Upside'    ? 'orange' :
+                d.drm_category === 'Omit'      ? 'red' : 'grey'
+              return (
+                <KpiCard
+                  key={d.drm_category}
+                  label={d.drm_category}
+                  value={moneyK(d.total_acv)}
+                  sub={`${d.n_opps} opps`}
+                  color={color}
+                />
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* DRM evolution — line chart */}
       <div>

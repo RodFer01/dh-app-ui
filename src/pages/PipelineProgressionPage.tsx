@@ -432,16 +432,16 @@ export default function PipelineProgressionPage() {
       )}
 
       {/* Building Block — DRM breakdown of top opps */}
-      {topOppsRows.length > 0 && (
+      {bbRows.length > 0 && (
         <div>
           <SectionLabel>Pipeline Building Block — by DRM Category</SectionLabel>
           <BuildingBlockChart
-            rows={topOppsRows}
+            rows={bbRows}
             groupBy="drm_category"
-            valueField="acv_usd"
+            solL1s={filters.sol_l1s}
             currency={currency}
             fx={fx}
-            title={`Top ${topLimit} Opps — Building Block (${currency})`}
+            title={`Pipeline Building Block (${currency})`}
           />
         </div>
       )}

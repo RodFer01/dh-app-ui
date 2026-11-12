@@ -122,6 +122,126 @@ function BookingCard({ b }: { b: Booking }) {
   )
 }
 
+const SHADOW_DRM_COLOR: Record<string, string> = {
+  'Disc/Lost':              'bg-red-100 text-red-700',
+  'Exclude from Pipeline':  'bg-orange-100 text-orange-700',
+  'Partner Upside':         'bg-yellow-100 text-yellow-700',
+  'Partner Forecasted':     'bg-amber-100 text-amber-700',
+}
+
+function ShadowOppsTab({ fOpts }: { fOpts: any }) {
+  const qc = useQueryClient()
+  const [sf, setSf] = useState({ closing_qtrs: [] as string[], regions: [] as string[], sol_l1s: [] as string[] })
+  const [localComments, setLocalComments] = useState<Record<string, string>>({})
+
+  const sfParams = new URLSearchParams()
+  sf.closing_qtrs.forEach(v => sfParams.append('closing_qtrs', v))
+  sf.regions.forEach(v => sfParams.append('regions', v))
+  sf.sol_l1s.forEach(v => sfParams.append('sol_l1s', v))
+
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ['shadow-opps', sf],
+    queryFn: () => api.get(`/api/pipeline/bookings/shadow-opps?${sfParams}`).then(r => r.data),
+  })
+
+  const { data: savedComments = {} } = useQuery({
+    queryKey: ['shadow-comments'],
+    queryFn: () => api.get('/api/pipeline/bookings/shadow-comments').then(r => r.data),
+  })
+
+  const saveMut = useMutation({
+    mutationFn: ({ closedId, shadowId, comment, corregir }: any) =>
+      api.put(`/api/pipeline/bookings/shadow-comments/${closedId}/${shadowId}`, { comment, corregir }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['shadow-comments'] }),
+  })
+
+  const getKey = (row: any) => `${row.closed_opp_id}|${row.shadow_opp_id}`
+  const getSaved = (row: any) => savedComments[getKey(row)] ?? { comment: '', corregir: 0 }
+
+  return (
+    <div>
+      {/* Shadow filters */}
+      <div className="bg-white border border-sap-border rounded-xl p-4 mb-4 flex gap-3">
+        <MultiSelect label="Quarter"     selected={sf.closing_qtrs} options={fOpts.closing_qtrs ?? []} onChange={v => setSf(p => ({...p, closing_qtrs: v}))} />
+        <MultiSelect label="Região"      selected={sf.regions}      options={fOpts.regions ?? []}      onChange={v => setSf(p => ({...p, regions: v}))} />
+        <MultiSelect label="Solution L1" selected={sf.sol_l1s}      options={fOpts.sol_l1s ?? []}      onChange={v => setSf(p => ({...p, sol_l1s: v}))} />
+      </div>
+
+      {isLoading ? (
+        <div className="text-sm text-sap-muted text-center py-16">Carregando...</div>
+      ) : rows.length === 0 ? (
+        <div className="text-sm text-sap-muted text-center py-16">Nenhum resultado encontrado.</div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-[12px] border-collapse">
+            <thead>
+              <tr className="bg-[#f0f4f8] text-[11px] font-semibold uppercase tracking-wide text-[#556b82]">
+                <th className="p-2 text-left border-b border-sap-border">Opp Fechada</th>
+                <th className="p-2 text-left border-b">Conta</th>
+                <th className="p-2 text-left border-b">Descrição (fechada)</th>
+                <th className="p-2 text-left border-b">Sol L1</th>
+                <th className="p-2 text-right border-b">ACV Fechado</th>
+                <th className="p-2 text-left border-b border-l-2 border-l-sap-blue">Opp Shadow</th>
+                <th className="p-2 text-left border-b">Descrição (shadow)</th>
+                <th className="p-2 text-left border-b">DRM Shadow</th>
+                <th className="p-2 text-left border-b">DSA no VAT</th>
+                <th className="p-2 text-right border-b">ACV Shadow</th>
+                <th className="p-2 text-center border-b">Incluir</th>
+                <th className="p-2 text-left border-b">Por quê incluir</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row: any) => {
+                const key = getKey(row)
+                const saved = getSaved(row)
+                const included = !!saved.corregir
+                const commentVal = localComments[key] ?? saved.comment ?? ''
+                return (
+                  <tr key={key} className={`border-b border-sap-border ${included ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
+                    <td className="p-2 font-mono text-[11px] text-sap-blue">{row.closed_opp_id}</td>
+                    <td className="p-2 font-medium">{row.account_name}</td>
+                    <td className="p-2 text-sap-muted max-w-[160px]"><div className="line-clamp-2">{row.closed_description}</div></td>
+                    <td className="p-2">{row.closed_sol_l1}</td>
+                    <td className="p-2 text-right font-semibold">{fmtCurrency(row.closed_acv)}</td>
+                    <td className="p-2 font-mono text-[11px] text-sap-blue border-l-2 border-l-sap-blue">{row.shadow_opp_id}</td>
+                    <td className="p-2 text-sap-muted max-w-[160px]"><div className="line-clamp-2">{row.shadow_description}</div></td>
+                    <td className="p-2">
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.shadow_drm] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {row.shadow_drm}
+                      </span>
+                    </td>
+                    <td className="p-2 text-sap-muted">{row.shadow_vat_dh || '—'}</td>
+                    <td className="p-2 text-right font-semibold">{fmtCurrency(row.shadow_acv)}</td>
+                    <td className="p-2 text-center">
+                      <button
+                        onClick={() => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: commentVal, corregir: included ? 0 : 1 })}
+                        className={`px-2 py-1 rounded text-[11px] font-semibold border transition-colors ${included ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-gray-300 text-gray-600 hover:border-sap-blue hover:text-sap-blue'}`}
+                      >
+                        {included ? 'Incluído' : 'Incluir'}
+                      </button>
+                    </td>
+                    <td className="p-2">
+                      <textarea
+                        className="w-full text-[11px] border border-sap-border rounded p-1 resize-none bg-transparent focus:outline-none focus:border-sap-blue"
+                        rows={2}
+                        maxLength={200}
+                        placeholder="Motivo..."
+                        value={commentVal}
+                        onChange={e => setLocalComments(p => ({...p, [key]: e.target.value}))}
+                        onBlur={e => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: e.target.value, corregir: saved.corregir })}
+                      />
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export function BookingsPage() {
   const [activeTab, setActiveTab] = useState<'bookings' | 'shadow'>('bookings')
   const [filters, setFilters] = useState({

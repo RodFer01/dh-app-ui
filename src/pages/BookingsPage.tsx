@@ -201,14 +201,12 @@ function ShadowOppsTab({ fOpts }: { fOpts: any }) {
                 <th className="p-2 text-left border-b">Conta</th>
                 <th className="p-2 text-left border-b">Descrição</th>
                 <th className="p-2 text-left border-b">DRM</th>
-                <th className="p-2 text-right border-b">ACV Fechado</th>
-                <th className="p-2 text-left border-b">Produtos vendidos</th>
-                <th className="p-2 text-left border-b border-l-2 border-l-sap-blue">Opp Shadow</th>
+                <th className="p-2 text-right border-b">ACV</th>
+                <th className="p-2 text-left border-b border-l-2 border-l-sap-blue">Opp c/ DSA</th>
                 <th className="p-2 text-left border-b">Descrição</th>
                 <th className="p-2 text-left border-b">DRM</th>
-                <th className="p-2 text-left border-b">Produtos da Opp</th>
                 <th className="p-2 text-left border-b">DSA no VAT</th>
-                <th className="p-2 text-right border-b">ACV Shadow</th>
+                <th className="p-2 text-right border-b">ACV</th>
                 <th className="p-2 text-center border-b">Incluir</th>
                 <th className="p-2 text-left border-b">Motivo</th>
               </tr>
@@ -222,48 +220,61 @@ function ShadowOppsTab({ fOpts }: { fOpts: any }) {
                 const closedLines = (linesMap as any)[row.closed_opp_id] ?? []
                 const shadowLines = (linesMap as any)[row.shadow_opp_id] ?? []
                 const matchedSet = new Set((row.matched_products || '').split(' | ').filter(Boolean))
+                const rowCls = included ? 'bg-green-50' : 'hover:bg-gray-50'
                 return (
-                  <tr key={key} className={`border-b border-sap-border align-top ${included ? 'bg-green-50' : 'hover:bg-gray-50'}`}>
-                    <td className="p-2 font-mono text-[11px] text-sap-blue whitespace-nowrap">{row.closed_opp_id}</td>
-                    <td className="p-2 font-medium max-w-[120px]"><div className="line-clamp-2">{row.account_name}</div></td>
-                    <td className="p-2 text-sap-muted max-w-[140px]"><div className="line-clamp-2">{row.closed_description}</div></td>
-                    <td className="p-2 whitespace-nowrap">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.closed_drm] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {row.closed_drm}
-                      </span>
-                    </td>
-                    <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtCurrency(row.closed_acv)}</td>
-                    <td className="p-2 max-w-[180px]"><ProductChips lines={closedLines} showAcv /></td>
-                    <td className="p-2 font-mono text-[11px] text-sap-blue border-l-2 border-l-sap-blue whitespace-nowrap">{row.shadow_opp_id}</td>
-                    <td className="p-2 text-sap-muted max-w-[140px]"><div className="line-clamp-2">{row.shadow_description}</div></td>
-                    <td className="p-2 whitespace-nowrap">
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.shadow_drm] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {row.shadow_drm}
-                      </span>
-                    </td>
-                    <td className="p-2 max-w-[180px]"><ProductChips lines={shadowLines} matchedSet={matchedSet} /></td>
-                    <td className="p-2 text-sap-muted whitespace-nowrap">{row.shadow_vat_dh || '—'}</td>
-                    <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtCurrency(row.shadow_acv)}</td>
-                    <td className="p-2 text-center">
-                      <button
-                        onClick={() => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: commentVal, corregir: included ? 0 : 1 })}
-                        className={`px-2 py-1 rounded text-[11px] font-semibold border transition-colors ${included ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-gray-300 text-gray-600 hover:border-sap-blue hover:text-sap-blue'}`}
-                      >
-                        {included ? 'Incluído' : 'Incluir'}
-                      </button>
-                    </td>
-                    <td className="p-2">
-                      <textarea
-                        className="w-full text-[11px] border border-sap-border rounded p-1 resize-none bg-transparent focus:outline-none focus:border-sap-blue"
-                        rows={2}
-                        maxLength={200}
-                        placeholder="Motivo..."
-                        value={commentVal}
-                        onChange={e => setLocalComments(p => ({...p, [key]: e.target.value}))}
-                        onBlur={e => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: e.target.value, corregir: saved.corregir })}
-                      />
-                    </td>
-                  </tr>
+                  <>
+                    {/* Main row */}
+                    <tr key={key} className={`border-b border-sap-border/50 align-top ${rowCls}`}>
+                      <td className="p-2 font-mono text-[11px] text-sap-blue whitespace-nowrap">{row.closed_opp_id}</td>
+                      <td className="p-2 font-medium max-w-[130px]"><div className="line-clamp-2">{row.account_name}</div></td>
+                      <td className="p-2 text-sap-muted max-w-[150px]"><div className="line-clamp-2">{row.closed_description}</div></td>
+                      <td className="p-2 whitespace-nowrap">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.closed_drm] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {row.closed_drm}
+                        </span>
+                      </td>
+                      <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtCurrency(row.closed_acv)}</td>
+                      <td className="p-2 font-mono text-[11px] text-sap-blue border-l-2 border-l-sap-blue whitespace-nowrap">{row.shadow_opp_id}</td>
+                      <td className="p-2 text-sap-muted max-w-[150px]"><div className="line-clamp-2">{row.shadow_description}</div></td>
+                      <td className="p-2 whitespace-nowrap">
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${SHADOW_DRM_COLOR[row.shadow_drm] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {row.shadow_drm}
+                        </span>
+                      </td>
+                      <td className="p-2 text-sap-muted whitespace-nowrap text-[11px]">{row.shadow_vat_dh || '—'}</td>
+                      <td className="p-2 text-right font-semibold whitespace-nowrap">{fmtCurrency(row.shadow_acv)}</td>
+                      <td className="p-2 text-center">
+                        <button
+                          onClick={() => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: commentVal, corregir: included ? 0 : 1 })}
+                          className={`px-2 py-1 rounded text-[11px] font-semibold border transition-colors ${included ? 'bg-green-500 border-green-600 text-white' : 'bg-white border-gray-300 text-gray-600 hover:border-sap-blue hover:text-sap-blue'}`}
+                        >
+                          {included ? 'Incluído' : 'Incluir'}
+                        </button>
+                      </td>
+                      <td className="p-2">
+                        <textarea
+                          className="w-full min-w-[120px] text-[11px] border border-sap-border rounded p-1 resize-none bg-transparent focus:outline-none focus:border-sap-blue"
+                          rows={2}
+                          maxLength={200}
+                          placeholder="Motivo..."
+                          value={commentVal}
+                          onChange={e => setLocalComments(p => ({...p, [key]: e.target.value}))}
+                          onBlur={e => saveMut.mutate({ closedId: row.closed_opp_id, shadowId: row.shadow_opp_id, comment: e.target.value, corregir: saved.corregir })}
+                        />
+                      </td>
+                    </tr>
+                    {/* Products sub-row */}
+                    <tr key={`${key}-products`} className={`border-b border-sap-border align-top ${rowCls}`}>
+                      <td colSpan={5} className="px-2 pb-2 pt-0">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Produtos vendidos</div>
+                        <ProductChips lines={closedLines} showAcv />
+                      </td>
+                      <td colSpan={7} className="px-2 pb-2 pt-0 border-l-2 border-l-sap-blue">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1">Produtos da opp com DSA <span className="text-blue-500">(destacados = match)</span></div>
+                        <ProductChips lines={shadowLines} matchedSet={matchedSet} />
+                      </td>
+                    </tr>
+                  </>
                 )
               })}
             </tbody>

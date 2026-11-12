@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 import { MultiSelect, SearchMultiSelect } from '../components/MultiSelect'
+import { formatAcvK } from '../lib/utils'
 
 interface Booking {
   opportunity_id: string
@@ -26,12 +27,7 @@ function parsePeople(csv: string): string[] {
   return (csv || '').split(',').map(s => s.trim()).filter(Boolean)
 }
 
-function fmtCurrency(n: number): string {
-  if (!n) return '—'
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`
-  return `$${Math.round(n)}`
-}
+const fmtCurrency = (n: number): string => formatAcvK(n, 'USD')
 
 function fmtDate(s: string): string {
   if (!s) return '—'

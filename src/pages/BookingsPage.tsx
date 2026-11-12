@@ -130,12 +130,12 @@ function ProductChips({ lines, matchedSet, showAcv }: { lines: any[]; matchedSet
   return (
     <div className="flex flex-col gap-1">
       {lines.map((l: any, i: number) => {
-        const name = l.eng || l.sol_l2 || '—'
-        const isMatch = matchedSet ? (matchedSet.has(name) || matchedSet.has(l.sol_l2)) : false
+        const isMatch = matchedSet ? matchedSet.has(l.sol_l2) : false
         return (
           <span key={i} className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium leading-tight ${isMatch ? 'bg-blue-100 text-blue-800 border border-blue-300' : 'bg-gray-100 text-gray-700'}`}>
-            {name}
-            {showAcv && l.acv > 0 && <span className="opacity-70 font-normal ml-0.5">{fmtCurrency(l.acv)}</span>}
+            <span className="font-semibold">{l.sol_l1 || '—'}</span>
+            {l.sol_l2 && <><span className="opacity-50 mx-0.5">›</span><span>{l.sol_l2}</span></>}
+            {showAcv && l.acv > 0 && <span className="opacity-60 font-normal ml-0.5">{fmtCurrency(l.acv)}</span>}
           </span>
         )
       })}

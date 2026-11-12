@@ -25,16 +25,8 @@ export interface PipelineFilters {
   priorities: string[]
   probability_min: string
   probability_max: string
-  // SPEC / IAE filters
+  // IAE filter
   iaes: string[]
-  spec_cxs: string[]
-  spec_hxms: string[]
-  spec_procurements: string[]
-  spec_dscs: string[]
-  spec_btps: string[]
-  spec_bdcs: string[]
-  spec_fins: string[]
-  spec_pros: string[]
 }
 
 const EMPTY: PipelineFilters = {
@@ -43,8 +35,7 @@ const EMPTY: PipelineFilters = {
   flsms: [], opp_owners: [], local_owners: [], drms: [], channel_partners: [],
   digital_sa: '', engagement: '', search: '', deal_type: '',
   priorities: [], probability_min: '', probability_max: '',
-  iaes: [], spec_cxs: [], spec_hxms: [], spec_procurements: [], spec_dscs: [],
-  spec_btps: [], spec_bdcs: [], spec_fins: [], spec_pros: [],
+  iaes: [],
 }
 
 function buildParams(filters: PipelineFilters): Record<string, unknown> {
@@ -73,14 +64,6 @@ function buildParams(filters: PipelineFilters): Record<string, unknown> {
   if (filters.probability_min)         p.probability_min  = parseFloat(filters.probability_min)
   if (filters.probability_max)         p.probability_max  = parseFloat(filters.probability_max)
   if (filters.iaes.length)             p.iaes             = filters.iaes
-  if (filters.spec_cxs.length)         p.spec_cxs         = filters.spec_cxs
-  if (filters.spec_hxms.length)        p.spec_hxms        = filters.spec_hxms
-  if (filters.spec_procurements.length) p.spec_procurements = filters.spec_procurements
-  if (filters.spec_dscs.length)        p.spec_dscs        = filters.spec_dscs
-  if (filters.spec_btps.length)        p.spec_btps        = filters.spec_btps
-  if (filters.spec_bdcs.length)        p.spec_bdcs        = filters.spec_bdcs
-  if (filters.spec_fins.length)        p.spec_fins        = filters.spec_fins
-  if (filters.spec_pros.length)        p.spec_pros        = filters.spec_pros
   return p
 }
 

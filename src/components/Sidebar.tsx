@@ -83,9 +83,10 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'flex-shrink-0 bg-[#003270] border-r border-[#002050] flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-200 relative',
+        'flex-shrink-0 bg-[#003270] border-r border-[#002050] flex flex-col overflow-y-auto overflow-x-hidden transition-all duration-200 relative [&::-webkit-scrollbar]:hidden',
         collapsed ? 'w-[52px]' : 'w-56'
       )}
+      style={{ scrollbarWidth: 'none' }}
     >
       <button
         onClick={() => setCollapsed(c => !c)}

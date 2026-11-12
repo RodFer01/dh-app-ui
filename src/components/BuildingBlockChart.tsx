@@ -133,8 +133,8 @@ export function BuildingBlockChart({
         </div>
       </div>
 
-      {/* Building blocks — bottom aligned */}
-      <div className="flex gap-1.5 items-end">
+      {/* Building blocks — top aligned */}
+      <div className="flex gap-1.5 items-start">
         {categories.map(([cat, { total, count, rows: catRows }]) => {
           const pct = total / maxAcv
           const blockH = Math.max(MIN_H, Math.round(pct * MAX_H))

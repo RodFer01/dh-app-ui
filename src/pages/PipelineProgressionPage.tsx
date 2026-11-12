@@ -34,14 +34,17 @@ const fetch = (url: string, params: Record<string, any> = {}) =>
 const moneyK = (v: number | null | undefined) =>
   v == null ? '—' : `$${(v / 1000).toFixed(0)}K`
 
-// Extract only the params supported by past_pipeline from the full filter set
+// Extract params supported by past_pipeline from the full filter set
 function ppParams(p: Record<string, any>, extras: Record<string, any> = {}): Record<string, any> {
   const out: Record<string, any> = {}
-  if (p.closing_qtrs?.length) out.closing_qtrs = p.closing_qtrs
-  if (p.regions?.length)      out.regions      = p.regions
-  if (p.sol_l1s?.length)      out.sol_l1s      = p.sol_l1s
-  if (p.drms?.length)         out.drms         = p.drms
-  if (p.opp_phases?.length)   out.opp_phases   = p.opp_phases
+  const fields = [
+    'closing_qtrs', 'regions', 'region_lvl4s', 'sol_l1s', 'sol_l2s', 'drms', 'opp_phases',
+    'qual_decisions', 'iss_groups', 'iacs', 'flsms', 'opp_owners', 'local_owners',
+    'channel_partners', 'acc_sub_segments', 'engagement_types',
+  ]
+  for (const f of fields) {
+    if (p[f]?.length) out[f] = p[f]
+  }
   return { ...out, ...extras }
 }
 
@@ -243,9 +246,12 @@ export default function PipelineProgressionPage() {
     { field: 'acv_to',   headerName: 'ACV After',  flex: 1, minWidth: 100, valueFormatter: (p: any) => moneyK(p.value) },
     { field: 'phase_from', headerName: 'Phase Before', flex: 1, minWidth: 120 },
     { field: 'phase_to',   headerName: 'Phase After',  flex: 1, minWidth: 120 },
+    { field: 'qual_from',  headerName: 'Qual Before',  flex: 1, minWidth: 110 },
+    { field: 'qual_to',    headerName: 'Qual After',   flex: 1, minWidth: 110 },
   ], [])
 
   const stalledCols = useMemo(() => [
+    { field: 'opportunity_id', headerName: 'Opp ID',   flex: 1, minWidth: 130 },
     { field: 'account_name',   headerName: 'Account',  flex: 2, minWidth: 160 },
     { field: 'opp_owner_name', headerName: 'Owner',    flex: 1, minWidth: 120 },
     { field: 'region_lvl3',    headerName: 'Region',   flex: 1, minWidth: 100 },
@@ -281,11 +287,23 @@ export default function PipelineProgressionPage() {
       />
 
       {/* KPI row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <KpiCard label="Total Opps"   value={summary?.total_opps   ?? '—'} />
         <KpiCard label="Total ACV"    value={moneyK(summary?.total_acv)} />
         <KpiCard label="Stalled Opps" value={summary?.stalled_opps ?? '—'} />
         <KpiCard label="Stalled ACV"  value={moneyK(summary?.stalled_acv)} />
+        <KpiCard
+          label="ACV Change"
+          value={summary?.delta_acv != null && summary.delta_acv !== 0 ? moneyK(summary.delta_acv) : '—'}
+          color={summary?.delta_acv > 0 ? 'green' : summary?.delta_acv < 0 ? 'red' : 'grey'}
+        />
+        <KpiCard
+          label="ACV Δ %"
+          value={summary?.delta_acv_pct != null && summary.delta_acv_pct !== 0
+            ? `${summary.delta_acv_pct > 0 ? '+' : ''}${summary.delta_acv_pct.toFixed(1)}%`
+            : '—'}
+          color={summary?.delta_acv_pct > 0 ? 'green' : summary?.delta_acv_pct < 0 ? 'red' : 'grey'}
+        />
       </div>
 
       {/* DRM evolution — line chart */}

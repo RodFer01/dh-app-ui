@@ -27,6 +27,12 @@ const PHASE_PALETTE = [
   '#7b61ff','#e8740c','#00b2a9','#c4278f','#8899aa',
 ]
 const POSITIVE_DRM = new Set(['Committed', 'Probable'])
+const EXCLUDED_DRMS = new Set(['Exclude from Pipeline', 'Partner Forecasted', 'Partner Upside'])
+
+const formatWeek = (w: string) => {
+  const [y, m, d] = w.split('-')
+  return `${d}/${m}/${y.slice(2)}`
+}
 
 const fetch = (url: string, params: Record<string, any> = {}) =>
   api.get(url, { params }).then(r => r.data)

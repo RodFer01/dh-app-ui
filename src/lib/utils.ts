@@ -16,16 +16,14 @@ export function formatCurrency(value: number | null | undefined, currency: 'USD'
   }).format(value)
 }
 
-/** Format ACV in thousands: $1,234.6K — divide by 1000 then format */
+/** Format ACV summary: $10.00K / $1.50Mi — always 2 decimal places */
 export function formatAcvK(value: number | null | undefined, currency: 'USD' | 'EUR' = 'USD'): string {
   if (value == null) return '—'
-  const k = value / 1000
   const sym = currency === 'EUR' ? '€' : '$'
-  const formatted = new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(k)
-  return `${sym}${formatted}K`
+  const abs = Math.abs(value)
+  if (abs >= 1_000_000) return `${sym}${(value / 1_000_000).toFixed(2)}Mi`
+  if (abs >= 1_000)     return `${sym}${(value / 1_000).toFixed(2)}K`
+  return `${sym}${value.toFixed(2)}`
 }
 
 export function formatNumber(value: number | null | undefined): string {

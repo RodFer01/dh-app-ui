@@ -419,27 +419,16 @@ export default function PipelineProgressionPage() {
     { field: 'account_name',   headerName: 'Account',     flex: 2, minWidth: 160 },
     { field: 'opp_owner_name', headerName: 'Owner',       flex: 1, minWidth: 120 },
     { field: 'region_lvl3',    headerName: 'Region',      flex: 1, minWidth: 100 },
+    { field: 'drm_category',   headerName: 'DRM',         flex: 1, minWidth: 110 },
+    { field: 'opp_phase',      headerName: 'Phase',       flex: 1, minWidth: 120 },
     {
-      field: 'drm_category', headerName: 'DRM', flex: 1, minWidth: 110,
-      cellStyle: (p: any) => p.data?.drm_changed ? { backgroundColor: '#fff3cc' } : {},
-      tooltipValueGetter: (p: any) => p.data?.drm_changed ? `${p.data.prev_drm} → ${p.data.drm_category}` : '',
-    },
-    {
-      field: 'opp_phase', headerName: 'Phase', flex: 1, minWidth: 120,
-      cellStyle: (p: any) => p.data?.phase_changed ? { backgroundColor: '#fff3cc' } : {},
-      tooltipValueGetter: (p: any) => p.data?.phase_changed ? `${p.data.prev_phase} → ${p.data.opp_phase}` : '',
-    },
-    {
-      field: 'acv_usd', headerName: 'ACV', flex: 1, minWidth: 100,
+      field: 'acv_total_opp', headerName: 'ACV', flex: 1, minWidth: 100,
       valueFormatter: (p: any) => moneyK(p.value),
-      cellStyle: (p: any) => {
-        if (!p.data?.acv_changed) return {}
-        return { color: p.value > (p.data.prev_acv ?? 0) ? '#1a7f4b' : '#cc0000', fontWeight: 600 }
-      },
+      sort: 'desc' as const,
     },
-    { field: 'closing_qtr', headerName: 'Closing Qtr', flex: 1, minWidth: 100 },
-    { field: 'age_days',    headerName: 'Age Days',    flex: 1, minWidth: 90,  sort: 'desc' },
-    { field: 'dda_status',  headerName: 'DDA Status',  flex: 1, minWidth: 110 },
+    { field: 'closing_qtr',    headerName: 'Closing Qtr', flex: 1, minWidth: 100 },
+    { field: 'solution_area_l1', headerName: 'Solution L1', flex: 1.5, minWidth: 140 },
+    { field: 'dda_status',     headerName: 'DDA Status',  flex: 1, minWidth: 110 },
   ], [])
 
   return (

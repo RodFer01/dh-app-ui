@@ -325,6 +325,34 @@ export default function PipelineProgressionPage() {
     { field: 'dda_status', headerName: 'DDA Status', flex: 1, minWidth: 110 },
   ], [])
 
+  const topOppsCols = useMemo(() => [
+    { field: 'opportunity_id', headerName: 'Opp ID',      flex: 1, minWidth: 130 },
+    { field: 'account_name',   headerName: 'Account',     flex: 2, minWidth: 160 },
+    { field: 'opp_owner_name', headerName: 'Owner',       flex: 1, minWidth: 120 },
+    { field: 'region_lvl3',    headerName: 'Region',      flex: 1, minWidth: 100 },
+    {
+      field: 'drm_category', headerName: 'DRM', flex: 1, minWidth: 110,
+      cellStyle: (p: any) => p.data?.drm_changed ? { backgroundColor: '#fff3cc' } : {},
+      tooltipValueGetter: (p: any) => p.data?.drm_changed ? `${p.data.prev_drm} → ${p.data.drm_category}` : '',
+    },
+    {
+      field: 'opp_phase', headerName: 'Phase', flex: 1, minWidth: 120,
+      cellStyle: (p: any) => p.data?.phase_changed ? { backgroundColor: '#fff3cc' } : {},
+      tooltipValueGetter: (p: any) => p.data?.phase_changed ? `${p.data.prev_phase} → ${p.data.opp_phase}` : '',
+    },
+    {
+      field: 'acv_usd', headerName: 'ACV', flex: 1, minWidth: 100,
+      valueFormatter: (p: any) => moneyK(p.value),
+      cellStyle: (p: any) => {
+        if (!p.data?.acv_changed) return {}
+        return { color: p.value > (p.data.prev_acv ?? 0) ? '#1a7f4b' : '#cc0000', fontWeight: 600 }
+      },
+    },
+    { field: 'closing_qtr', headerName: 'Closing Qtr', flex: 1, minWidth: 100 },
+    { field: 'age_days',    headerName: 'Age Days',    flex: 1, minWidth: 90,  sort: 'desc' },
+    { field: 'dda_status',  headerName: 'DDA Status',  flex: 1, minWidth: 110 },
+  ], [])
+
   return (
     <div className="p-4 space-y-4">
       {/* Header */}
@@ -407,6 +435,43 @@ export default function PipelineProgressionPage() {
         <SectionLabel>Weekly Evolution — Opp Phase (# Opps)</SectionLabel>
         <div className="bg-white rounded border p-3 mt-2">
           <EChart option={phaseOption} style={{ height: 340 }} />
+        </div>
+      </div>
+
+      {/* Top Opportunities by ACV */}
+      <div>
+        <div className="flex items-center gap-2">
+          <SectionLabel>Top Opportunities by ACV</SectionLabel>
+          <div className="ml-auto flex gap-1 mb-1">
+            {[20, 40, 60].map(n => (
+              <button
+                key={n}
+                onClick={() => setTopLimit(n)}
+                className={`px-2 py-0.5 text-xs rounded border ${topLimit === n ? 'bg-blue-600 text-white border-blue-600' : 'text-gray-600 border-gray-300 hover:bg-gray-100'}`}
+              >
+                Top {n}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className={selectedFrom === 'top' && selectedOpp ? 'flex gap-4 items-start mt-2' : 'mt-2'}
+          style={selectedFrom === 'top' && selectedOpp ? { minHeight: 'calc(100vh - 140px)' } : {}}>
+          <div className={selectedFrom === 'top' && selectedOpp ? 'flex-1 min-w-0' : ''}>
+            <DataTable rows={topOppsRows} cols={topOppsCols} height={selectedFrom === 'top' && selectedOpp ? 480 : 380} onRowClick={handleSelectTopOpp} />
+          </div>
+          {selectedFrom === 'top' && selectedOpp && (
+            <div className="w-[62%] flex-shrink-0 sticky top-4">
+              <OppDetailPanel
+                opp={selectedOpp}
+                noteForm={noteForm}
+                setNoteForm={setNoteForm}
+                saveMut={saveMut}
+                onClose={() => { setSelectedOpp(null); setSelectedFrom(null) }}
+                currency={currency}
+                fx={fx}
+              />
+            </div>
+          )}
         </div>
       </div>
 

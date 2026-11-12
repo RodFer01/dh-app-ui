@@ -144,6 +144,12 @@ export default function PipelineProgressionPage() {
     staleTime: 60_000,
   })
 
+  // Top opps by ACV from current pipeline (always populated, respects all filters)
+  const bbRowsByAcv = useMemo(
+    () => [...bbRows].sort((a, b) => (b.acv_total_opp ?? 0) - (a.acv_total_opp ?? 0)).slice(0, topLimit),
+    [bbRows, topLimit]
+  )
+
   const handleSelectOpp = (row: any) => {
     setSelectedOpp(row)
     setNoteForm(BLANK_NOTE_FORM)

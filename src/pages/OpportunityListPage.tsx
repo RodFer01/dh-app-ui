@@ -668,6 +668,7 @@ export function OpportunityListPage() {
         <BuildingBlockChart
           rows={filteredByBag}
           groupBy="drm_category"
+          solL1s={filters.sol_l1s}
           currency={currency}
           fx={fxRate}
           title={`Pipeline Building Block (${currency})`}

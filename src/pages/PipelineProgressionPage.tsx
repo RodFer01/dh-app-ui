@@ -291,25 +291,63 @@ export default function PipelineProgressionPage() {
     const weeks  = [...new Set(phaseRows.map((r: any) => r.snapshot_week))].sort() as string[]
     const phases = [...new Set(phaseRows.map((r: any) => r.opp_phase))].sort() as string[]
 
-    const series = phases.map((phase, i) => {
-      const byWeek: Record<string, number> = Object.fromEntries(
+    const byWeekByPhase: Record<string, Record<string, number>> = {}
+    for (const phase of phases) {
+      byWeekByPhase[phase] = Object.fromEntries(
         phaseRows.filter((r: any) => r.opp_phase === phase)
           .map((r: any) => [r.snapshot_week, r.n_opps])
       )
+    }
+
+    const series = phases.map((phase, i) => {
       const color = PHASE_PALETTE[i % PHASE_PALETTE.length]
       return {
         name: phase,
         type: 'bar' as const,
+        stack: 'phases',
         itemStyle: { color },
-        label: { show: true, fontSize: 9, color: '#fff', formatter: (p: any) => p.value > 0 ? String(p.value) : '' },
+        label: { show: false },
         data: weeks.map((w, wi) => {
-          const curr = byWeek[w] ?? 0
-          const prev = wi > 0 ? (byWeek[weeks[wi - 1]] ?? 0) : null
+          const curr = byWeekByPhase[phase][w] ?? 0
+          const prev = wi > 0 ? (byWeekByPhase[phase][weeks[wi - 1]] ?? 0) : null
           const deltaPct = prev != null && prev > 0 ? ((curr - prev) / prev * 100) : null
           return { value: curr, deltaPct }
         }),
       }
     })
+
+    // Total opps per week + % change shown above bars
+    const weekTotals = weeks.map((w) =>
+      phases.reduce((s, ph) => s + (byWeekByPhase[ph][w] ?? 0), 0)
+    )
+    const totalSeries = {
+      name: '__total__',
+      type: 'bar' as const,
+      stack: 'phases',
+      silent: true,
+      emphasis: { disabled: true },
+      itemStyle: { color: 'transparent', borderWidth: 0 },
+      tooltip: { show: false },
+      label: {
+        show: true,
+        position: 'top' as const,
+        fontSize: 11,
+        fontWeight: 'bold',
+        color: '#1e293b',
+        distance: 6,
+        lineHeight: 16,
+        formatter: (p: any) => {
+          const i = p.dataIndex
+          const total = weekTotals[i] ?? 0
+          const prev  = i > 0 ? (weekTotals[i - 1] ?? 0) : null
+          const pct   = prev != null && prev > 0 ? ((total - prev) / prev * 100) : null
+          const arrow = pct == null ? '' : pct >= 0 ? '▲' : '▼'
+          const pctStr = pct != null ? `\n${arrow}${Math.abs(pct).toFixed(0)}%` : ''
+          return `${total}${pctStr}`
+        },
+      },
+      data: weeks.map(() => ({ value: 0 })),
+    }
 
     return {
       tooltip: {
@@ -317,8 +355,8 @@ export default function PipelineProgressionPage() {
         axisPointer: { type: 'shadow' },
         formatter: (params: any[]) => {
           const header = `<b>${formatWeek(params[0]?.axisValue)}</b><br/>`
-          const lines = params
-            .filter((p: any) => p.value > 0)
+          const lines = (params as any[])
+            .filter((p: any) => p.value > 0 && !String(p.seriesName).startsWith('__'))
             .map((p: any) => {
               const pct = p.data?.deltaPct
               const pctStr = pct != null
@@ -330,10 +368,10 @@ export default function PipelineProgressionPage() {
         },
       },
       legend: { data: phases, bottom: 0, textStyle: { fontSize: 11 } },
-      grid: { left: 16, right: 16, top: 20, bottom: 48, containLabel: true },
+      grid: { left: 16, right: 16, top: 48, bottom: 48, containLabel: true },
       xAxis: { type: 'category', data: weeks, axisLabel: { rotate: 30, fontSize: 11, formatter: formatWeek } },
       yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#788fa6' } },
-      series,
+      series: [...series, totalSeries],
     }
   }, [phaseRows])
 

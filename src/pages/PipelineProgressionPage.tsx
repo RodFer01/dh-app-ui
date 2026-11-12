@@ -137,6 +137,13 @@ export default function PipelineProgressionPage() {
     queryFn: () => fetch('/api/pipeline-progression/top-opps', topOppsParams),
   })
 
+  // Building Block chart — /api/pipeline so ALL filter bar params work (not limited to past_pipeline fields)
+  const { data: bbRows = [] } = useQuery({
+    queryKey: ['pp-bb', debouncedParams],
+    queryFn: () => fetch('/api/pipeline', debouncedParams),
+    staleTime: 60_000,
+  })
+
   const handleSelectOpp = (row: any) => {
     setSelectedOpp(row)
     setNoteForm(BLANK_NOTE_FORM)

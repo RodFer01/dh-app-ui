@@ -222,9 +222,23 @@ export default function PipelineProgressionPage() {
     const series = cats.map((cat) => ({
       name: cat,
       type: 'bar' as const,
-      stack: 'total',
       itemStyle: { color: DRM_COLORS[cat] ?? '#8899aa' },
-      label: { show: false },
+      label: {
+        show: true,
+        position: 'top' as const,
+        fontSize: 10,
+        fontWeight: 'bold',
+        color: '#1e293b',
+        distance: 4,
+        lineHeight: 14,
+        formatter: (p: any) => {
+          if (!p.value || p.value < 2000) return ''
+          const pct = p.data?.deltaPct
+          if (pct == null) return moneyK(p.value)
+          const arrow = pct >= 0 ? '▲' : '▼'
+          return `${moneyK(p.value)}\n${arrow}${Math.abs(pct).toFixed(0)}%`
+        },
+      },
       data: weeks.map((w, i) => {
         const curr = byWeekByCat[cat][w] ?? 0
         const prev = i > 0 ? (byWeekByCat[cat][weeks[i - 1]] ?? 0) : null
@@ -233,39 +247,6 @@ export default function PipelineProgressionPage() {
       }),
     }))
 
-    // Total ACV per week + % change vs previous week — shown above bars
-    const weekTotals = weeks.map((w) =>
-      cats.reduce((s, cat) => s + (byWeekByCat[cat][w] ?? 0), 0)
-    )
-    const totalSeries = {
-      name: '__total__',
-      type: 'bar' as const,
-      stack: 'total',
-      silent: true,
-      emphasis: { disabled: true },
-      itemStyle: { color: 'transparent', borderWidth: 0 },
-      tooltip: { show: false },
-      label: {
-        show: true,
-        position: 'top' as const,
-        fontSize: 11,
-        fontWeight: 'bold',
-        color: '#1e293b',
-        distance: 6,
-        lineHeight: 16,
-        formatter: (p: any) => {
-          const i = p.dataIndex
-          const total = weekTotals[i] ?? 0
-          const prev  = i > 0 ? (weekTotals[i - 1] ?? 0) : null
-          const pct   = prev != null && prev > 0 ? ((total - prev) / prev * 100) : null
-          const arrow = pct == null ? '' : pct >= 0 ? '▲' : '▼'
-          const pctStr = pct != null ? `\n${arrow}${Math.abs(pct).toFixed(0)}%` : ''
-          return `${moneyK(total)}${pctStr}`
-        },
-      },
-      data: weeks.map(() => ({ value: 0 })),
-    }
-
     return {
       tooltip: {
         trigger: 'axis',
@@ -273,7 +254,7 @@ export default function PipelineProgressionPage() {
         formatter: (params: any[]) => {
           const header = `<b>${formatWeek(params[0]?.axisValue)}</b><br/>`
           const lines = (params as any[])
-            .filter((p: any) => p.value > 0 && !String(p.seriesName).startsWith('__'))
+            .filter((p: any) => p.value > 0)
             .map((p: any) => {
               const pct = p.data?.deltaPct
               const pctStr = pct != null
@@ -285,10 +266,10 @@ export default function PipelineProgressionPage() {
         },
       },
       legend: { data: cats, bottom: 0, textStyle: { fontSize: 11 } },
-      grid: { left: 16, right: 16, top: 48, bottom: 48, containLabel: true },
+      grid: { left: 16, right: 16, top: 40, bottom: 48, containLabel: true },
       xAxis: { type: 'category', data: weeks, axisLabel: { rotate: 30, fontSize: 11, formatter: formatWeek } },
       yAxis: { type: 'value', axisLabel: { fontSize: 10, color: '#788fa6', formatter: (v: number) => moneyK(v) } },
-      series: [...series, totalSeries],
+      series,
     }
   }, [evolutionRows])
 

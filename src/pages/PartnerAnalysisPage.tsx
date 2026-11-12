@@ -724,6 +724,7 @@ export default function PartnerAnalysisPage() {
             rows={partnerOppRows}
             groupBy="drm_category"
             valueField="acv_total_opp"
+            solL1s={filters.sol_l1s}
             currency={currency}
             fx={fxRate}
             title={`Partner Pipeline — Building Block (${currency})`}

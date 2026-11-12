@@ -20,6 +20,19 @@ const DRM_COLORS: Record<string, ColorDef> = {
 }
 const DEFAULT_COLOR: ColorDef = { bg: '#788fa6', text: '#fff', badge: '#fff3' }
 
+// Exact solution_area_l1 values from DB → acv_l1_* field names
+const SOL_L1_TO_ACV_FIELD: Record<string, string> = {
+  'BAIP - Data & AI':                   'acv_l1_baip_dai',
+  'BAIP - Technology Foundation':       'acv_l1_baip_tf',
+  'Business Transformation Management': 'acv_l1_btm',
+  'Cloud ERP Private':                  'acv_l1_cloud_erp',
+  'Customer Experience':                'acv_l1_cx',
+  'Finance and Spend Management':       'acv_l1_finance',
+  'Human Capital Management':           'acv_l1_hcm',
+  'Supply Chain Management':            'acv_l1_scm',
+  'Other':                              'acv_l1_other',
+}
+
 const TOP_N_OPTIONS: Array<number | 'Todos'> = [10, 20, 40, 'Todos']
 
 // Only these categories shown, in this fixed order
@@ -38,6 +51,7 @@ interface Props {
   rows: any[]
   groupBy?: string
   valueField?: string
+  solL1s?: string[]
   currency?: 'USD' | 'EUR'
   fx?: number
   title?: string
@@ -47,6 +61,7 @@ export function BuildingBlockChart({
   rows,
   groupBy = 'drm_category',
   valueField,
+  solL1s,
   currency = 'USD',
   fx = 1,
   title = 'Pipeline — Building Block',
@@ -55,16 +70,25 @@ export function BuildingBlockChart({
   const sym = currency === 'EUR' ? '€' : '$'
 
   const getAcv = (r: any): number => {
-    const raw = valueField
-      ? Number(r[valueField] ?? 0)
-      : Number(r.acv_usd ?? r.acv_total_opp ?? 0)
+    let raw: number
+    if (solL1s && solL1s.length > 0) {
+      // Sum only the ACV components for selected Solution L1s
+      raw = solL1s.reduce((sum, l1) => {
+        const field = SOL_L1_TO_ACV_FIELD[l1]
+        return sum + (field ? Number(r[field] ?? 0) : 0)
+      }, 0)
+    } else if (valueField) {
+      raw = Number(r[valueField] ?? 0)
+    } else {
+      raw = Number(r.acv_usd ?? r.acv_total_opp ?? 0)
+    }
     return raw * fx
   }
 
   // All rows sorted by ACV desc
   const sortedRows = useMemo(
     () => [...rows].sort((a, b) => getAcv(b) - getAcv(a)),
-    [rows, fx, valueField]
+    [rows, fx, valueField, solL1s]
   )
 
   // Top N slice — drives both block sizes and cards (filters fully applied)
@@ -84,7 +108,7 @@ export function BuildingBlockChart({
       g[k].rows.push(r)
     }
     return g
-  }, [visibleRows, groupBy, fx, valueField])
+  }, [visibleRows, groupBy, fx, valueField, solL1s])
 
   const categories = useMemo(
     () => CATEGORY_ORDER
